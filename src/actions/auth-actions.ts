@@ -46,18 +46,20 @@ export async function requestPasswordReset(email: string) {
     // Send reset email
     const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
 
-    const emailHtml = renderToString(
-      PasswordResetEmail({
-        firstName: user.firstName,
-        resetUrl,
-      })
-    );
-
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || "OrbitHR <noreply@resend.dev>",
       to: email,
       subject: "Password Reset Request - OrbitHR",
-      html: emailHtml,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Password Reset Request</h2>
+          <p>Hi ${user.firstName},</p>
+          <p>You requested to reset your password. Click the button below to reset it:</p>
+          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0;">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
     });
 
     return {
