@@ -1,0 +1,6 @@
+{
+  "crons": [{
+    "path": "/api/cron/check-cv-inbox",
+    "schedule": "*/5 * * * *"
+  }]
+}

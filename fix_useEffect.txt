@@ -1,0 +1,60 @@
+  useEffect(() => {
+    // Load employees
+    const loadEmployees = async () => {
+      try {
+        const response = await fetch('/api/employees');
+        if (response.ok) {
+          const data = await response.json();
+          setEmployees(data.employees || []);
+        }
+      } catch (error) {
+        console.error("Failed to load employees:", error);
+      }
+    };
+
+    // Load company settings
+    const savedSettings = localStorage.getItem("company_settings");
+    if (savedSettings) {
+      setCompanySettings(JSON.parse(savedSettings));
+    }
+
+    // Initialize records from props (DB)
+    const mappedRecords = initialRecords.map(r => ({
+      id: r.id,
+      employeeId: r.employeeId,
+      employeeName: r.employee?.firstName ? `${r.employee.firstName} ${r.employee.lastName}` : "Unknown",
+      position: r.employee?.position || "",
+      department: r.employee?.department || "",
+      basicSalary: Number(r.basicSalary),
+      fixedAllowance: 0, // TODO: Map from allowances JSON if needed
+      commission: Number(r.bonuses),
+      isGenerated: r.isProcessed,
+      generatedAt: r.updatedAt,
+    }));
+    
+    // Only update if we don't have local changes (prevent overwriting generated records)
+    setPayrollRecords(prevRecords => {
+      // If we have no records yet, use the mapped records from server
+      if (prevRecords.length === 0) {
+        return mappedRecords;
+      }
+      
+      // Merge server data with local state, preserving local changes
+      return mappedRecords.map(serverRecord => {
+        const localRecord = prevRecords.find(r => r.id === serverRecord.id);
+        // If we have a local version and it's generated, keep the local version
+        if (localRecord && localRecord.isGenerated) {
+          return localRecord;
+        }
+        // Otherwise use the server version
+        return serverRecord;
+      });
+    });
+
+    loadEmployees();
+  }, [initialRecords]);
+
+  useEffect(() => {
+    setMonth(initialMonth);
+    setYear(initialYear);
+  }, [initialMonth, initialYear]);

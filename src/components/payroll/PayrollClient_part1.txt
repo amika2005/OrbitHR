@@ -1,0 +1,133 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  DollarSign,
+  TrendingUp,
+  Users,
+  Calendar,
+  Plus,
+  Eye,
+  X,
+  Trash2,
+  Edit,
+  Download,
+  FileDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { generatePayslipPDF } from "@/lib/payslip-generator";
+import { toast } from "sonner";
+import * as XLSX from 'xlsx';
+import { 
+  generatePayroll as generatePayrollAction,
+  deletePayrollRecord,
+  updatePayrollRecord
+} from "@/actions/payroll-actions";
+
+type Currency = "USD" | "LKR" | "JPY" | "EUR" | "GBP";
+
+const currencySymbols: Record<Currency, string> = {
+  USD: "$",
+  LKR: "Rs.",
+  JPY: "",
+  EUR: "",
+  GBP: "",
+};
+
+interface PayrollRecord {
+  id: string;
+  employeeId?: string;
+  employeeName: string;
+  position?: string;
+  department?: string;
+  dateOfJoining?: string;
+  basicSalary: number;
+  fixedAllowance: number;
+  commission: number;
+  slip?: string;
+  isGenerated: boolean;
+  generatedAt?: string;
+}
+
+interface PayrollClientProps {
+  initialRecords: any[];
+  summary: {
+    totalPayroll: number;
+    employeeCount: number;
+    avgSalary: number;
+    totalDeductions: number;
+  };
+  initialMonth: number;
+  initialYear: number;
+}
+
+export default function PayrollClient({ 
+  initialRecords, 
+  summary: initialSummary,
+  initialMonth,
+  initialYear
+}: PayrollClientProps) {
+  const router = useRouter();
+  const [currency, setCurrency] = useState<Currency>("LKR");
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedSlip, setSelectedSlip] = useState<string | null>(null);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+  const [month, setMonth] = useState(initialMonth);
+  const [year, setYear] = useState(initialYear);
+
+  useEffect(() => {
+    const loadEmployees = async () => {
+      try {
+        const response = await fetch('/api/employees');
+        if (response.ok) {
+          const data = await response.json();
+          setEmployees(data.employees || []);
+        }
+      } catch (error) {
+        console.error("Failed to load employees:", error);
+      }
+    };
+
+    const savedSettings = localStorage.getItem("company_settings");
+    if (savedSettings) {
+      setCompanySettings(JSON.parse(savedSettings));
+    }
+
+    const mappedRecords = initialRecords.map(r => ({
+      id: r.id,
+      employeeId: r.employeeId,
+      employeeName: r.employee?.firstName ? `${r.employee.firstName} ${r.employee.lastName}` : "Unknown",
+      position: r.employee?.position || "",
+      department: r.employee?.department || "",
+      basicSalary: Number(r.basicSalary),
+      fixedAllowance: 0,
+      commission: Number(r.bonuses),
+      isGenerated: r.isProcessed,
+      generatedAt: r.updatedAt,
+    }));
+    
+    setPayrollRecords(prevRecords => {
+      if (prevRecords.length === 0) {
+        return mappedRecords;
+      }
+      return mappedRecords.map(serverRecord => {
+        const localRecord = prevRecords.find(r => r.id === serverRecord.id);
+        if (localRecord && localRecord.isGenerated) {
+          return localRecord;
+        }
+        return serverRecord;
+      });
+    });
+
+    loadEmployees();
+  }, [initialRecords]);
+
+  useEffect(() => {
+    setMonth(initialMonth);
+    setYear(initialYear);
+  }, [initialMonth, initialYear]);

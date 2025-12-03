@@ -1,0 +1,808 @@
+// OrbitHR - Production-Ready Prisma Schema
+// Multi-Tenant HRIS & ATS System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // For migrations with Supabase
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum UserRole {
+  SUPER_ADMIN   // Platform admin (OrbitHR team)
+  HR_MANAGER    // Can manage jobs, candidates, payroll
+  EMPLOYEE      // Regular employee (view own data)
+  CANDIDATE     // Job applicants
+}
+
+enum ApplicationStatus {
+  NEW
+  AI_SCREENED
+  HR_APPROVED
+  INTERVIEW_SCHEDULED
+  REJECTED
+  HIRED
+}
+
+enum Country {
+  JAPAN
+  SRI_LANKA
+}
+
+enum Currency {
+  JPY
+  LKR
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+enum WorkflowTrigger {
+  APPLICATION_SUBMITTED
+  AI_SCREENING_COMPLETE
+  INTERVIEW_SCHEDULED
+  CANDIDATE_HIRED
+  PAYROLL_GENERATED
+}
+
+enum ScreeningTemplateType {
+  TECHNICAL_FIT      // Pure technical skills assessment
+  CULTURAL_FIT       // Culture-specific (Japanese, Western, etc.)
+  BALANCED           // Mix of both
+  CUSTOM             // Fully custom by admin
+}
+
+enum LeaveType {
+  ANNUAL_LEAVE
+  CASUAL_LEAVE
+  SICK_LEAVE
+  HALF_DAY
+  UNPAID_LEAVE
+  MATERNITY_LEAVE
+  PATERNITY_LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum EmploymentStatus {
+  PERMANENT
+  PROBATION
+  INTERN
+  CONTRACT
+}
+
+// ========================================
+// MODELS
+// ========================================
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique // For subdomain routing
+  country   Country
+  currency  Currency
+  
+  // Tax & Payroll Configuration
+  taxRules  Json     // Store country-specific tax brackets
+  settings  Json     // Additional company settings (logo, theme, etc.)
+  emailSettings Json? // { ccEmails: string[] }
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  users              User[]
+  jobs               Job[]
+  applications       Application[]
+  payrollRecords     PayrollRecord[]
+  workflows          Workflow[]
+  screeningTemplates ScreeningTemplate[]
+  leaveRequests      LeaveRequest[]
+  leaveBalances      LeaveBalance[]
+  
+  @@index([slug])
+  @@map("companies")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String?  @unique // Clerk user ID
+  email         String   @unique
+  firstName     String
+  lastName      String
+  role          UserRole @default(EMPLOYEE)
+  
+  // Employee-specific fields
+  employeeId    String?  @unique // Company-specific employee number
+  department    String?
+  position      String?
+  hireDate      DateTime?
+  salary        Decimal?  @db.Decimal(12, 2)
+  imageUrl      String?   @db.Text // Base64 or URL for profile photo
+  
+  // Custom Fields (for bulk import extra columns)
+  customFields  Json?     @db.Json
+  
+  // Employment Status
+  employmentStatus  EmploymentStatus @default(PERMANENT)
+  
+  // Leave Balances (in days)
+  annualLeaveBalance   Int @default(0)
+  casualLeaveBalance   Int @default(0)
+  sickLeaveBalance     Int @default(0)
+  unpaidLeaveTaken     Int @default(0)  // Track unpaid leave usage
+  
+  // Contact Information
+  contactNumber           String?
+  emergencyContactNumber  String?
+
+  // Bank Details
+  bankName      String?
+  accountNumber String?
+  branch        String?
+  epfNumber     String?  // Employee Provident Fund Number (Sri Lanka)
+  
+  // Org Chart - Manager Relationship
+  managerId     String?
+  manager       User?     @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  subordinates  User[]    @relation("ManagerSubordinates")
+  
+  // Multi-tenancy
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  applications       Application[] // If they're a candidate
+  payrollRecords     PayrollRecord[]
+  applicationsReviewed Application[] @relation("ReviewedBy")
+  
+  // Leave Management
+  leaveRequests      LeaveRequest[]
+  leaveBalances      LeaveBalance[]
+  leaveSubstitutions LeaveRequest[] @relation("LeaveSubstitute")
+  leaveReviews       LeaveRequest[] @relation("LeaveReviewer")
+  calendarIntegration CalendarIntegration?
+  salaryStructure    SalaryStructure?
+  payrollApprovals   PayrollApproval[]
+  documents          Document[] @relation("UserDocuments")
+  notifications      Notification[] @relation("UserNotifications")
+  oneOnOneNotesAsEmployee OneOnOneNote[] @relation("EmployeeNotes")
+  oneOnOneNotesAsHR       OneOnOneNote[] @relation("HRManagerNotes")
+  
+  @@index([companyId])
+  @@index([clerkId])
+  @@index([email])
+  @@map("users")
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  title           String
+  description     String    @db.Text
+  requirements    String    @db.Text
+  
+  // Location & Compensation
+  country         Country
+  location        String    // City/Region
+  salaryMin       Decimal   @db.Decimal(12, 2)
+  salaryMax       Decimal   @db.Decimal(12, 2)
+  currency        Currency
+  
+  // Job Details
+  department      String
+  employmentType  String    // Full-time, Part-time, Contract
+  status          JobStatus @default(DRAFT)
+  
+  // AI Context (used for screening)
+  keySkills           String[]  // Array of required skills
+  screeningTemplateId String?   // Which template to use for AI screening
+  screeningTemplate   ScreeningTemplate? @relation(fields: [screeningTemplateId], references: [id])
+  
+  // Multi-tenancy
+  companyId       String
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  postedAt        DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  applications    Application[]
+  cvInboxes       CVInbox[]  // CVs received for this job
+  
+  @@index([companyId])
+  @@index([status])
+  @@index([screeningTemplateId])
+  @@map("jobs")
+}
+
+model Application {
+  id                    String             @id @default(cuid())
+  
+  // Candidate Info
+  candidateId           String
+  candidate             User               @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  // Job Info
+  jobId                 String
+  job                   Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  // Resume & Cover Letter
+  resumeUrl             String             // S3/Supabase Storage URL
+  coverLetter           String?            @db.Text
+  portfolioUrl          String?
+  
+  // AI Screening Results
+  aiScore               Int?               // 0-100
+  culturalFitScore      Int?               // 0-100 (Japanese cultural alignment)
+  aiSummary             String?            @db.Text
+  missingSkills         String[]           // Skills candidate lacks
+  aiProcessedAt         DateTime?
+  
+  // Manual Review
+  status                ApplicationStatus  @default(NEW)
+  manualNotes           String?            @db.Text
+  reviewedById          String?
+  reviewedBy            User?              @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt            DateTime?
+  
+  // Interview Scheduling
+  interviewDate         DateTime?
+  interviewNotes        String?            @db.Text
+  
+  // Multi-tenancy
+  companyId             String
+  company               Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  
+  // Relations
+  cvInbox               CVInbox[]  // CVs that created this application
+  
+  @@index([companyId])
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([status])
+  @@map("applications")
+}
+
+model PayrollRecord {
+  id                    String   @id @default(cuid())
+  
+  // Employee
+  employeeId            String
+  employee              User     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Period
+  month                 Int      // 1-12
+  year                  Int
+  payDate               DateTime
+  
+  // Salary Breakdown
+  basicSalary           Decimal  @db.Decimal(12, 2)
+  allowances            Json     // { housing: 50000, transport: 20000, ... }
+  bonuses               Decimal  @default(0) @db.Decimal(12, 2)
+  
+  // Deductions
+  taxDeductions         Decimal  @db.Decimal(12, 2)
+  employeePension       Decimal  @db.Decimal(12, 2) // EPF (SL) or Social Insurance (JP)
+  healthInsurance       Decimal  @default(0) @db.Decimal(12, 2)
+  otherDeductions       Json     // Flexible deductions
+  
+  // Employer Contributions (not deducted from employee)
+  employerPension       Decimal  @db.Decimal(12, 2) // EPF Employer contribution
+  employerETF           Decimal  @default(0) @db.Decimal(12, 2) // Only for Sri Lanka
+  
+  // Net Pay
+  netSalary             Decimal  @db.Decimal(12, 2)
+  currency              Currency
+  
+  // Additional Info
+  notes                 String?  @db.Text
+  isProcessed           Boolean  @default(false)
+  
+  // Multi-tenancy
+  companyId             String
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Detailed Breakdown Relations
+  deductionsList        PayrollDeduction[]
+  earningsList          PayrollEarning[]
+  approvals             PayrollApproval[]
+  
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@unique([employeeId, month, year]) // One record per employee per month
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("payroll_records")
+}
+
+model Workflow {
+  id          String          @id @default(cuid())
+  name        String
+  description String?         @db.Text
+  trigger     WorkflowTrigger
+  actions     Json            // Array of actions to perform
+  isActive    Boolean         @default(true)
+  
+  // Multi-tenancy
+  companyId   String
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  @@index([companyId])
+  @@map("workflows")
+}
+
+model ScreeningTemplate {
+  id                  String                  @id @default(cuid())
+  name                String                  // "Japanese Culture Fit", "Technical Only", etc.
+  description         String?                 @db.Text
+  type                ScreeningTemplateType
+  
+  // AI Prompt Configuration
+  systemPrompt        String                  @db.Text // Base instructions for AI
+  evaluationCriteria  Json                    // { technical: 40, cultural: 30, communication: 30 }
+  culturalValues      String[]                // ["Loyalty", "Humility", "Teamwork"] - customizable
+  requiredSkillsWeight Float                   @default(0.6) // 60% weight on required skills
+  culturalFitWeight   Float                   @default(0.4) // 40% weight on cultural fit
+  
+  // Scoring Thresholds
+  minPassingScore     Int                     @default(60)
+  autoRejectThreshold Int?                    // If set, auto-reject below this (null = no auto-reject)
+  
+  // Template Settings
+  isDefault           Boolean                 @default(false) // One default per company
+  isActive            Boolean                 @default(true)
+  
+  // Multi-tenancy
+  companyId           String
+  company             Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  // Relations
+  jobs                Job[]                   // Jobs using this template
+  
+  @@index([companyId])
+  @@index([isDefault])
+  @@map("screening_templates")
+}
+
+model LeaveRequest {
+  id              String      @id @default(cuid())
+  
+  // Employee Info
+  employeeId      String
+  employee        User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Leave Details
+  leaveType       LeaveType
+  startDate       DateTime
+  endDate         DateTime
+  isHalfDay       Boolean     @default(false)
+  totalDays       Float       // Can be 0.5 for half day
+  
+  // Request Details
+  reason          String?     @db.Text
+  substituteId    String?     // Employee covering during leave
+  substitute      User?       @relation("LeaveSubstitute", fields: [substituteId], references: [id])
+  
+  // Status
+  status          LeaveStatus @default(PENDING)
+  
+  // Approval
+  reviewedById    String?
+  reviewedBy      User?       @relation("LeaveReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  reviewNotes     String?     @db.Text
+  
+  // Google Calendar Integration
+  googleEventId   String?     // Google Calendar event ID
+  
+  // Multi-tenancy
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([status])
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id              String   @id @default(cuid())
+  
+  // Employee
+  employeeId      String
+  employee        User     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Leave Type
+  leaveType       LeaveType
+  
+  // Balance
+  totalDays       Float    // Total annual allocation
+  usedDays        Float    @default(0)
+  remainingDays   Float    // Calculated: totalDays - usedDays
+  
+  // Year
+  year            Int
+  
+  // Multi-tenancy
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([employeeId, leaveType, year])
+  @@index([companyId])
+  @@index([employeeId])
+  @@map("leave_balances")
+}
+
+model CalendarIntegration {
+  id                String   @id @default(cuid())
+  
+  // User
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Google Calendar
+  googleAccessToken String?  @db.Text
+  googleRefreshToken String? @db.Text
+  googleCalendarId  String?  // Primary calendar ID
+  
+  // Settings
+  syncEnabled       Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("calendar_integrations")
+}
+
+// ========================================
+// INDEXES FOR PERFORMANCE
+// ========================================
+// Additional composite indexes for common queries:
+// - Applications by job and status
+// - Payroll records by company and period
+// - Users by company and role
+
+// ========================================
+// PAYROLL SYSTEM MODELS
+// ========================================
+
+model SalaryStructure {
+  id          String   @id @default(cuid())
+  employeeId  String   @unique
+  employee    User     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Earnings Components
+  basicSalary       Decimal  @db.Decimal(12, 2)
+  hra               Decimal  @default(0) @db.Decimal(12, 2) // House Rent Allowance
+  transportAllowance Decimal @default(0) @db.Decimal(12, 2)
+  medicalAllowance  Decimal  @default(0) @db.Decimal(12, 2)
+  specialAllowance  Decimal  @default(0) @db.Decimal(12, 2)
+  
+  // Configuration
+  effectiveFrom DateTime @default(now())
+  effectiveTo   DateTime?
+  isActive      Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("salary_structures")
+}
+
+model PayrollDeduction {
+  id              String        @id @default(cuid())
+  payrollRecordId String
+  payrollRecord   PayrollRecord @relation(fields: [payrollRecordId], references: [id], onDelete: Cascade)
+  
+  type            String        // EPF, TAX, LOAN, PROFESSIONAL_TAX, OTHER
+  amount          Decimal       @db.Decimal(12, 2)
+  description     String?
+  
+  createdAt       DateTime      @default(now())
+
+  @@index([payrollRecordId])
+  @@map("payroll_deductions")
+}
+
+model PayrollEarning {
+  id              String        @id @default(cuid())
+  payrollRecordId String
+  payrollRecord   PayrollRecord @relation(fields: [payrollRecordId], references: [id], onDelete: Cascade)
+  
+  type            String        // BASIC, HRA, TRANSPORT, MEDICAL, SPECIAL, BONUS, OVERTIME
+  amount          Decimal       @db.Decimal(12, 2)
+  description     String?
+  
+  createdAt       DateTime      @default(now())
+
+  @@index([payrollRecordId])
+  @@map("payroll_earnings")
+}
+
+model PayrollApproval {
+  id              String        @id @default(cuid())
+  payrollRecordId String
+  payrollRecord   PayrollRecord @relation(fields: [payrollRecordId], references: [id], onDelete: Cascade)
+  
+  approvedBy      String
+  approver        User          @relation(fields: [approvedBy], references: [id])
+  approvedAt      DateTime      @default(now())
+  status          String        // PENDING, APPROVED, REJECTED
+  comments        String?       @db.Text
+  
+  createdAt       DateTime      @default(now())
+
+  @@index([payrollRecordId])
+  @@index([approvedBy])
+  @@map("payroll_approvals")
+}
+
+// Document Management
+model Document {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  
+  fileName    String
+  fileUrl     String   @db.Text
+  fileSize    Int      // in bytes
+  fileType    String   // MIME type
+  category    String   // ID_PROOF, CONTRACT, CERTIFICATE, OTHER
+  
+  uploadedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([category])
+  @@map("documents")
+}
+
+// Notifications
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String   @db.Text
+  type      String   // LEAVE_APPROVED, LEAVE_REJECTED, PAYSLIP_READY, GENERAL
+  isRead    Boolean  @default(false)
+  
+  relatedId String?  // ID of related entity (leave request, payroll, etc.)
+  actionUrl String?  // URL to navigate to when clicked
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// 1-on-1 Journal Notes
+model OneOnOneNote {
+  id          String   @id @default(cuid())
+  
+  // Employee being discussed
+  employeeId  String
+  employee    User     @relation("EmployeeNotes", fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // HR Manager who wrote the note
+  hrManagerId String
+  hrManager   User     @relation("HRManagerNotes", fields: [hrManagerId], references: [id], onDelete: Cascade)
+  
+  // Note Content
+  notes       String   @db.Text
+  
+  // Action Items (stored as JSON array of strings)
+  actionItems Json     @default("[]")
+  
+  // Last meeting date (optional)
+  lastMeetingDate DateTime?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([employeeId, hrManagerId]) // One note per employee per HR manager
+  @@index([employeeId])
+  @@index([hrManagerId])
+  @@map("one_on_one_notes")
+}
+
+// ========================================
+// PULSE SURVEYS
+// ========================================
+
+model Survey {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  questions     Json     // Array of question objects: [{id, text, type, required}]
+  targetType    String   // "all" | "department" | "employees"
+  targetValue   String?  // Department name or comma-separated employee IDs
+  status        String   @default("draft") // "draft" | "active" | "closed"
+  shareToken    String   @unique @default(cuid()) // For public links
+  
+  // Scheduling
+  scheduledAt   DateTime?
+  closesAt      DateTime?
+  
+  // Metadata
+  createdBy     String   // User ID who created the survey
+  companyId     String?  // Optional: for multi-tenant support
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  responses     SurveyResponse[]
+  
+  @@index([shareToken])
+  @@index([status])
+  @@index([createdBy])
+  @@map("surveys")
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  // Respondent info (nullable for anonymous responses)
+  respondent  String?  // Email or employee ID
+  respondentName String?
+  
+  // Response data
+  answers     Json     // Array of answer objects: [{questionId, answer}]
+  
+  // Metadata
+  submittedAt DateTime @default(now())
+  ipAddress   String?  // For duplicate detection and abuse prevention
+  userAgent   String?  // Browser info
+  
+  @@index([surveyId])
+  @@index([respondent])
+  @@index([submittedAt])
+  @@map("survey_responses")
+}
+
+// ========================================
+// AI CV INBOX SYSTEM
+// ========================================
+
+model CVInbox {
+  id              String   @id @default(cuid())
+  
+  // Email metadata
+  emailFrom       String   // Sender email
+  emailSubject    String?
+  emailBody       String?  @db.Text
+  receivedAt      DateTime
+  
+  // CV file
+  fileName        String
+  fileUrl         String   // Cloudinary/S3 URL
+  fileType        String   // "pdf", "docx", "txt"
+  fileSize        Int      // bytes
+  
+  // Parsed data
+  parsedText      String?  @db.Text
+  candidateName   String?
+  candidateEmail  String?
+  candidatePhone  String?
+  
+  // AI Analysis
+  aiScore         Int?     // 0-100
+  aiAnalysis      Json?    // Detailed AI response
+  skills          String[] // Extracted skills
+  experience      String?  // Years of experience
+  education       String?
+  
+  // Routing decision
+  status          String   // "PENDING", "AI_SCREENED", "AUTO_REJECTED", "MANUAL_REVIEW"
+  routedToPipeline Boolean @default(false)
+  applicationId   String?  // Link to Application if created
+  application     Application? @relation(fields: [applicationId], references: [id])
+  
+  // Job matching
+  jobId           String?  // If email was for specific job
+  job             Job?     @relation(fields: [jobId], references: [id])
+  
+  // Processing metadata
+  processedAt     DateTime?
+  processingError String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([emailFrom])
+  @@index([status])
+  @@index([aiScore])
+  @@index([receivedAt])
+  @@map("cv_inbox")
+}
+
+model EmailConfig {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  
+  // Email credentials (encrypted)
+  emailProvider   String   // "gmail", "outlook", "imap"
+  emailAddress    String   // hr@company.com
+  imapHost        String?
+  imapPort        Int?
+  imapUsername    String?
+  imapPassword    String?  // Encrypted
+  
+  // Gmail OAuth (if using Gmail API)
+  gmailRefreshToken String?
+  gmailAccessToken  String?
+  
+  // AI Settings
+  aiProvider      String   @default("openai") // "openai", "claude"
+  aiModel         String   @default("gpt-4")
+  scoreThreshold  Int      @default(70) // Minimum score to route to pipeline
+  
+  // Monitoring settings
+  enabled         Boolean  @default(true)
+  checkInterval   Int      @default(5) // minutes
+  lastChecked     DateTime?
+  
+  // Notification settings
+  notifyOnHighScore Boolean @default(true)
+  notifyEmail       String?
+  notifySlack       String? // Webhook URL
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("email_configs")
+}

@@ -1,0 +1,49 @@
+          companyLogo: companySettings?.logo || "",
+        });
+
+        // Update record with slip and new ID if it was new
+        setPayrollRecords(records =>
+          records.map(r =>
+            r.id === record.id ? { 
+              ...r, 
+              id: result.data?.id || r.id,
+              slip, 
+              isGenerated: true, 
+              generatedAt: new Date().toISOString() 
+            } : r
+          )
+        );
+
+        toast.success("Payroll generated and saved successfully!");
+    } catch (error) {
+        console.error(error);
+        toast.error("An unexpected error occurred");
+    }
+  };
+
+  const handleExport = () => {
+    const data = payrollRecords.map(record => {
+      const epf = calculateEPF(record.basicSalary, record.position);
+      const etf = calculateETF(record.basicSalary, record.position);
+      const netPay = calculateNetPay(record);
+      
+      return {
+        "Employee Name": record.employeeName,
+        "Designation": record.position || "-",
+        "Basic Salary": record.basicSalary,
+        "Fixed Allowance": record.fixedAllowance,
+        "Commission": record.commission,
+        "EPF (8%)": epf,
+        "ETF (3%)": etf,
+        "Net Pay": netPay,
+        "Status": record.isGenerated ? "Processed" : "Pending",
+        "Generated At": record.generatedAt ? new Date(record.generatedAt).toLocaleDateString() : "-"
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Payroll Data");
+    XLSX.writeFile(wb, `Payroll_Export_${year}_${month}.xlsx`);
+    toast.success("Payroll data exported successfully");
+  };

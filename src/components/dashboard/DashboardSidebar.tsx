@@ -1,0 +1,371 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useClerk, useUser } from "@clerk/nextjs";
+import {
+  Home,
+  Briefcase,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Kanban,
+  Calendar,
+  Users,
+  DollarSign,
+  UserPlus,
+  Calculator,
+  Menu,
+  Wallet,
+  CreditCard,
+  Award,
+  Heart,
+  FileHeart,
+  Settings,
+} from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const navigation = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+  },
+  {
+    name: "ATS",
+    icon: Briefcase,
+    children: [
+
+      {
+        name: "Pipeline",
+        href: "/dashboard/pipeline",
+        icon: Kanban,
+        badge: "12",
+      },
+      {
+        name: "CV Database",
+        href: "/dashboard/cv-database",
+        icon: FileText,
+      },
+    ],
+  },
+  {
+    name: "Manage",
+    icon: Users,
+    children: [
+      {
+        name: "Employees",
+        href: "/dashboard/employees",
+        icon: UserPlus,
+      },
+      {
+        name: "Org Chart",
+        href: "/dashboard/org-chart",
+        icon: Users,
+      },
+      {
+        name: "Leave",
+        href: "/dashboard/leave",
+        icon: Calendar,
+      },
+
+      {
+        name: "Payroll",
+        icon: CreditCard,
+        children: [
+          {
+            name: "Payroll Management",
+            href: "/dashboard/payroll",
+            icon: CreditCard,
+          },
+          {
+            name: "Salary Slip Generator",
+            href: "/dashboard/payroll-tools/salary-slip",
+            icon: FileText,
+          },
+          {
+            name: "EPF/ETF Calculator",
+            href: "/dashboard/payroll-tools/epf-etf",
+            icon: Calculator,
+          },
+          {
+            name: "Gratuity Calculator",
+            href: "/dashboard/payroll-tools/gratuity",
+            icon: Award,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Retain",
+    icon: Heart,
+    children: [
+      {
+        name: "Pulse Surveys",
+        href: "/dashboard/retain/surveys",
+        icon: Heart,
+      },
+    ],
+  },
+  {
+    name: "Settings",
+    href: "/dashboard/settings/company",
+    icon: Settings,
+  },
+];
+
+interface DashboardSidebarProps {
+  className?: string;
+}
+
+export function DashboardSidebar({ className }: DashboardSidebarProps) {
+  const pathname = usePathname();
+  const [expandedSections, setExpandedSections] = useState<string[]>(["Hire", "Manage", "Payroll", "Retain"]);
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleSection = (sectionName: string) => {
+    if (isCollapsed) return;
+    setExpandedSections((prev) =>
+      prev.includes(sectionName)
+        ? prev.filter((s) => s !== sectionName)
+        : [...prev, sectionName]
+    );
+  };
+
+  const isActiveLink = (href: string) => {
+    return pathname === href || pathname?.startsWith(href + "/");
+  };
+
+  const renderNavItem = (item: any, depth: number = 0) => {
+    const hasChildren = "children" in item && item.children && item.children.length > 0;
+    const isExpanded = expandedSections.includes(item.name);
+    const isActive = item.href ? isActiveLink(item.href) : false;
+    
+    const isChildActive = hasChildren && item.children?.some((child: any) => 
+      child.href ? isActiveLink(child.href) : child.children?.some((grandChild: any) => isActiveLink(grandChild.href))
+    );
+
+    if (hasChildren) {
+      return (
+        <div key={item.name} className="space-y-0.5">
+          <button
+            onClick={() => toggleSection(item.name)}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-1.5 text-sm font-medium transition-colors group rounded-md",
+              isChildActive || isExpanded 
+                ? "text-zinc-900 dark:text-white" 
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800",
+              isCollapsed && "justify-center px-2"
+            )}
+            title={isCollapsed ? item.name : undefined}
+          >
+            <div className="flex items-center gap-2.5">
+              {item.icon && (
+                <item.icon className={cn(
+                  "h-4 w-4 transition-colors flex-shrink-0", 
+                  (isChildActive || isExpanded) ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400"
+                )} />
+              )}
+              {!isCollapsed && <span className="font-medium">{item.name}</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronRight className={cn(
+                "h-3.5 w-3.5 text-zinc-400 transition-transform duration-200",
+                isExpanded && "rotate-90"
+              )} />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {isExpanded && !isCollapsed && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className={cn(
+                  "space-y-0.5 mt-0.5 ml-6",
+                  depth > 0 && "ml-4"
+                )}>
+                  {item.children.map((child: any) => renderNavItem(child, depth + 1))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.name}
+        href={item.href || "#"}
+        className={cn(
+          "relative flex items-center gap-2.5 px-3 py-1.5 text-sm transition-all group rounded-md",
+          isActive 
+            ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white font-medium shadow-sm border border-zinc-200 dark:border-zinc-700" 
+            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800",
+          isCollapsed && "justify-center px-2"
+        )}
+        title={isCollapsed ? item.name : undefined}
+      >
+        {item.icon && (
+          <item.icon className={cn(
+            "h-4 w-4 transition-colors flex-shrink-0", 
+            isActive ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-500"
+          )} />
+        )}
+        {!isCollapsed && <span>{item.name}</span>}
+        {!isCollapsed && item.badge && (
+          <span className={cn(
+            "ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-md",
+            isActive 
+              ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" 
+              : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
+          )}>
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
+  return (
+    <>
+      {/* Premium Invisible Scrollbar Styles */}
+      <style jsx global>{`
+        .premium-scrollbar::-webkit-scrollbar {
+          width: 0px;
+          height: 0px;
+        }
+        .premium-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .premium-scrollbar::-webkit-scrollbar-thumb {
+          background: transparent;
+        }
+        .premium-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: transparent;
+        }
+        /* Firefox */
+        .premium-scrollbar {
+          scrollbar-width: none;
+          scrollbar-color: transparent transparent;
+        }
+      `}</style>
+
+      {/* Mobile Menu Button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Button variant="outline" size="icon" onClick={() => setIsMobileOpen(!isMobileOpen)}>
+          <Menu className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Sidebar Container */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 h-screen bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur-sm border-r border-zinc-200 dark:border-zinc-800 flex flex-col transition-all duration-300 ease-in-out",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:translate-x-0 lg:sticky lg:top-0",
+          isCollapsed ? "w-16" : "w-64",
+          className
+        )}
+      >
+        {/* Logo Area */}
+        <div className={cn(
+          "h-14 flex items-center border-b border-zinc-200 dark:border-zinc-800 transition-all duration-300",
+          isCollapsed ? "justify-center px-2" : "justify-between px-4"
+        )}>
+          {!isCollapsed && (
+            <Link href="/dashboard" className="flex items-center gap-2.5 group">
+              <div className="w-7 h-7 bg-zinc-900 dark:bg-white rounded-md flex items-center justify-center">
+                <span className="text-white dark:text-zinc-900 font-bold text-sm">O</span>
+              </div>
+              <span className="text-base font-semibold text-zinc-900 dark:text-white">OrbitHR</span>
+            </Link>
+          )}
+          {isCollapsed && (
+             <Link href="/dashboard" className="flex items-center justify-center">
+               <div className="w-7 h-7 bg-zinc-900 dark:bg-white rounded-md flex items-center justify-center">
+                 <span className="text-white dark:text-zinc-900 font-bold text-sm">O</span>
+               </div>
+             </Link>
+          )}
+          
+          {!isCollapsed && (
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors hidden lg:block"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
+        {/* Collapsed Toggle */}
+        {isCollapsed && (
+          <div className="hidden lg:flex justify-center py-2 border-b border-zinc-200 dark:border-zinc-800">
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-1 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Navigation - With Premium Scrollbar */}
+        <div className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5 premium-scrollbar">
+          {navigation.map((item) => renderNavItem(item))}
+        </div>
+
+        {/* Bottom User Section */}
+        <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
+          <div className={cn(
+            "flex items-center gap-2.5 mb-2 p-2 rounded-md transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer group",
+            isCollapsed && "justify-center px-0"
+          )}>
+            <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 ring-1 ring-zinc-200 dark:ring-zinc-700 overflow-hidden flex-shrink-0">
+              <img 
+                src={user?.imageUrl} 
+                alt={user?.fullName || "User"} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-zinc-900 dark:text-white truncate">
+                  {user?.fullName || "User"}
+                </p>
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                  {user?.primaryEmailAddress?.emailAddress}
+                </p>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => signOut()}
+            className={cn(
+              "w-full flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors",
+              isCollapsed && "justify-center px-0"
+            )}
+            title="Sign Out"
+          >
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && <span>Sign Out</span>}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
