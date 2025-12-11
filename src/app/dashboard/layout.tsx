@@ -4,6 +4,8 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { Header } from "@/components/dashboard/Header";
 import { syncUser } from "@/lib/auth-sync";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
