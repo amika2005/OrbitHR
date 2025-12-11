@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // Define ApplicationStatus enum locally since import is failing
-enum ApplicationStatus {
-  NEW = "NEW",
-  AI_SCREENED = "AI_SCREENED",
-  HR_APPROVED = "HR_APPROVED",
-  INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED",
-  HIRED = "HIRED",
-  REJECTED = "REJECTED",
-}
+import { ApplicationStatus } from "@prisma/client";
 import {
   Filter,
   Plus,
@@ -236,7 +229,15 @@ export default function CandidatesPage() {
 **Strengths:**
 - Expert in React and TypeScript
 - Excellent portfolio of projects
-- Strong communication skills
+- Strong communication skills`
+    });
+    setIsModalOpen(true);
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+        <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Candidates</h1>
           <p className="text-gray-600 dark:text-zinc-400">Manage your applicant pipeline</p>
         </div>

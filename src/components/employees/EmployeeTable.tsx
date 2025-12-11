@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { deleteEmployee } from "@/actions/employee-actions";
 import { Edit, Trash2, Mail, User, Briefcase, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { EditEmployeeDialog } from "./EditEmployeeDialog";
+import { useUser } from "@clerk/nextjs";
 
 interface Employee {
   id: string;
@@ -37,14 +38,19 @@ export function EmployeeTable({ employees, onRefresh }: EmployeeTableProps) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Extract all unique custom field keys from all employees
-  const customFieldKeys = Array.from(
-    new Set(
-      employees.flatMap((emp) =>
-        emp.customFields ? Object.keys(emp.customFields) : []
-      )
-    )
-  ).sort();
+  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user?.publicMetadata?.companyId) {
+      import("@/actions/custom-field-actions").then(async ({ getCustomFieldDefinitions }) => {
+        const result = await getCustomFieldDefinitions(user.publicMetadata.companyId as string, "EMPLOYEE");
+        if (result.success) {
+          setCustomFieldDefs(result.data || []);
+        }
+      });
+    }
+  }, [user]);
 
   const handleDelete = async (employee: Employee) => {
     const confirmed = confirm(
@@ -120,9 +126,9 @@ export function EmployeeTable({ employees, onRefresh }: EmployeeTableProps) {
               <th className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">Branch</th>
               <th className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">Status</th>
               {/* Dynamic custom field columns */}
-              {customFieldKeys.map((key) => (
-                <th key={key} className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">
-                  {key}
+              {customFieldDefs.map((def) => (
+                <th key={def.name} className="px-6 py-4 font-semibold text-zinc-900 dark:text-white">
+                  {def.label}
                 </th>
               ))}
               <th className="px-6 py-4 font-semibold text-zinc-900 dark:text-white text-right">Actions</th>
@@ -246,11 +252,11 @@ export function EmployeeTable({ employees, onRefresh }: EmployeeTableProps) {
                 </td>
 
                 {/* Dynamic custom field values */}
-                {customFieldKeys.map((key) => (
-                  <td key={key} className="px-6 py-4 text-zinc-600 dark:text-zinc-300">
-                    {employee.customFields?.[key] ? (
+                {customFieldDefs.map((def) => (
+                  <td key={def.name} className="px-6 py-4 text-zinc-600 dark:text-zinc-300">
+                    {employee.customFields?.[def.name] ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        {employee.customFields[key]}
+                        {employee.customFields[def.name]}
                       </span>
                     ) : (
                       <span className="text-zinc-400">-</span>

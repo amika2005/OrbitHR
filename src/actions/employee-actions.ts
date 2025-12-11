@@ -40,6 +40,7 @@ interface UpdateEmployeeData {
   accountNumber?: string;
   branch?: string;
   salary?: number;
+  customFields?: Record<string, any>;
 }
 
 export async function createEmployee(data: CreateEmployeeData) {
@@ -212,6 +213,7 @@ export async function updateEmployee(data: UpdateEmployeeData) {
         branch: data.branch,
         employmentStatus: data.employmentStatus as any,
         salary: data.salary,
+        customFields: data.customFields || undefined,
       },
     });
 

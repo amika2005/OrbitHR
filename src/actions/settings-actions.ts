@@ -21,7 +21,7 @@ export async function getCompanyEmailSettings() {
     }
 
     const company = await db.company.findUnique({
-      where: { id: user.companyId },
+      where: { id: user.companyId! },
       select: { settings: true },
     });
 
@@ -62,14 +62,14 @@ export async function updateCompanyEmailSettings(ccEmails: string[]) {
 
     // Get current settings first to merge
     const company = await db.company.findUnique({
-      where: { id: user.companyId },
+      where: { id: user.companyId! },
       select: { settings: true },
     });
 
     const currentSettings = (company?.settings as any) || {};
 
     await db.company.update({
-      where: { id: user.companyId },
+      where: { id: user.companyId! },
       data: {
         settings: {
           ...currentSettings,

@@ -9,9 +9,19 @@ interface LeaveRequestFormProps {
   onSuccess: () => void;
 }
 
+export type LeaveType = "ANNUAL_LEAVE" | "CASUAL_LEAVE" | "SICK_LEAVE" | "HALF_DAY" | "UNPAID_LEAVE" | "MATERNITY_LEAVE" | "PATERNITY_LEAVE";
+
+interface LeaveRequestData {
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  isHalfDay: boolean;
+  reason: string;
+}
+
 export function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFormProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<LeaveRequestData>({
     leaveType: "ANNUAL_LEAVE",
     startDate: "",
     endDate: "",
@@ -60,7 +70,7 @@ export function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFormProps) 
             </label>
             <select
               value={formData.leaveType}
-              onChange={(e) => setFormData({ ...formData, leaveType: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, leaveType: e.target.value as LeaveType })}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               required
             >

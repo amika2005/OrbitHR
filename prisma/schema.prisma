@@ -116,6 +116,7 @@ model Company {
   screeningTemplates ScreeningTemplate[]
   leaveRequests      LeaveRequest[]
   leaveBalances      LeaveBalance[]
+  customFieldDefinitions CustomFieldDefinition[]
   
   @@index([slug])
   @@map("companies")
@@ -165,8 +166,8 @@ model User {
   subordinates  User[]    @relation("ManagerSubordinates")
   
   // Multi-tenancy
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
   
   // Timestamps
   createdAt     DateTime @default(now())
@@ -324,7 +325,11 @@ model PayrollRecord {
   
   // Additional Info
   notes                 String?  @db.Text
+  slip                  String?  @db.Text // Base64 PDF Data URI
   isProcessed           Boolean  @default(false)
+
+  // Custom Fields
+  customFields          Json?    @db.Json
   
   // Multi-tenancy
   companyId             String
@@ -343,6 +348,28 @@ model PayrollRecord {
   @@index([companyId])
   @@index([employeeId])
   @@map("payroll_records")
+}
+
+model CustomFieldDefinition {
+  id          String   @id @default(cuid())
+  entityType  String   // "EMPLOYEE", "PAYROLL", etc.
+  name        String   // Field name (key)
+  label       String   // Display label
+  type        String   // "TEXT", "NUMBER", "DATE", "SELECT"
+  options     String[] // For SELECT type
+  required    Boolean  @default(false)
+  placeholder String?
+
+  // Multi-tenancy
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, entityType, name])
+  @@index([companyId, entityType])
+  @@map("custom_field_definitions")
 }
 
 model Workflow {

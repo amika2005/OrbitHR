@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { parseCV } from "@/lib/cv-parser";
 import { analyzeWithRetry } from "@/lib/ai/cv-scorer";
+import { ApplicationStatus } from "@prisma/client";
 
 export async function processCVInbox(cvInboxId: string) {
   try {
@@ -45,7 +46,7 @@ export async function processCVInbox(cvInboxId: string) {
         education: analysis.extractedData.education,
         aiScore: analysis.score,
         aiAnalysis: analysis as any,
-        status: "AI_SCREENED",
+        status: ApplicationStatus.AI_SCREENED,
         processedAt: new Date(),
       },
     });
@@ -124,6 +125,16 @@ export async function routeCVToPipeline(cvInboxId: string) {
       });
     }
 
+    // Get job to retrieve companyId
+    const job = await prisma.job.findUnique({
+      where: { id: cvInbox.jobId },
+      select: { companyId: true },
+    });
+
+    if (!job) {
+      return { success: false, error: "Job not found" };
+    }
+
     // Create application
     const application = await prisma.application.create({
       data: {
@@ -132,8 +143,8 @@ export async function routeCVToPipeline(cvInboxId: string) {
         resumeUrl: cvInbox.fileUrl,
         aiScore: cvInbox.aiScore,
         aiSummary: JSON.stringify(cvInbox.aiAnalysis),
-        status: "AI_SCREENED",
-        companyId: candidate.companyId,
+        status: ApplicationStatus.AI_SCREENED,
+        companyId: job.companyId,
       },
     });
 

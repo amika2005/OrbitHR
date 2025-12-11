@@ -52,7 +52,7 @@ export async function createLeaveRequest(data: z.infer<typeof leaveRequestSchema
     const leaveRequest = await db.leaveRequest.create({
       data: {
         employeeId: user.id,
-        companyId: user.companyId,
+        companyId: user.companyId!,
         leaveType: validatedData.leaveType,
         startDate: new Date(validatedData.startDate),
         endDate: new Date(validatedData.endDate),
@@ -131,7 +131,7 @@ export async function getLeaveRequests(status?: string) {
     }
 
     const whereClause: any = {
-      companyId: user.companyId,
+      companyId: user.companyId!,
     };
 
     // If not HR_MANAGER, only show own requests

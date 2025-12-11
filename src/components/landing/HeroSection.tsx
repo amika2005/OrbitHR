@@ -1,104 +1,111 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CheckCircle } from "lucide-react";
+import { ArrowRight, Sparkles, Play } from "lucide-react";
 import Link from "next/link";
+import { useRef } from "react";
 
 export function HeroSection() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
+
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const rotateX = useTransform(scrollYProgress, [0, 1], [0, 10]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
+
   return (
-    <section className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-br from-white via-gray-50 to-green-50/20 pt-32">
-      {/* Background Decoration */}
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-green-50/30 to-transparent skew-x-12 pointer-events-none" />
+    <section ref={containerRef} className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-white">
       
-      <div className="max-w-7xl mx-auto px-6 py-20 w-full relative z-10">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left Content */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-left"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-block px-4 py-1.5 mb-6 rounded-full bg-green-100/50 border border-green-200"
-            >
-              <span className="text-sm font-semibold text-green-700 tracking-wide uppercase">
-                #1 HR Platform in Sri Lanka
+      {/* Light Theme Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Subtle gradients */}
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-blue-50/50 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-50/50 blur-[120px]" />
+        
+        {/* Grid Pattern - darker grid for light mode */}
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-[0.03] [mask-image:linear-gradient(180deg,black,transparent)]" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+        
+        <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 0.6 }}
+           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-zinc-200 mb-8 shadow-sm"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-black"></span>
+          </span>
+          <span className="text-sm font-medium text-zinc-600">New: AI Recruitment Engine 2.0</span>
+        </motion.div>
+
+        <motion.h1 
+          className="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900 mb-6 leading-tight"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+           The Future of Work is <br className="hidden md:block" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-700 to-zinc-900">
+            Intelligent & Unified
+          </span>
+        </motion.h1>
+
+        <motion.p 
+          className="text-xl text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          Manage your entire workforce from a single, beautiful dashboard. 
+          Payroll, ATS, and HRIS — reimagined for the modern era.
+        </motion.p>
+
+        <motion.div 
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <Link href="/dashboard">
+            <Button size="lg" className="relative h-14 px-8 bg-zinc-900 text-white text-lg font-semibold rounded-full transition-all shadow-lg hover:shadow-xl overflow-hidden group">
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-purple-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left ease-out" />
+              <span className="relative flex items-center z-10">
+                Get Started Free
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
-            </motion.div>
+            </Button>
+          </Link>
+        </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="text-5xl md:text-6xl lg:text-7xl font-bold text-[#0B132A] mb-8 leading-[1.1]"
-            >
-              The Backbone of
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#3ba156] to-[#2e8044]">
-                Modern HR Teams
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-              className="text-lg md:text-xl text-gray-600 mb-10 max-w-xl leading-relaxed"
-            >
-              Streamline your entire HR operation with our comprehensive HRIS and ATS system. From Payroll and Leave Management to Recruitment, handle it all in one unified platform.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-              className="flex flex-col sm:flex-row items-start gap-4"
-            >
-              <Link href="/dashboard">
-                <Button 
-                  size="lg"
-                  className="h-14 px-10 bg-[#3ba156] hover:bg-[#3ba156] text-white text-lg font-bold rounded-full shadow-lg hover:shadow-green-500/30 transition-all duration-300 border-2 border-transparent hover:border-[#ff7308] relative overflow-hidden group"
-                >
-                  <span className="absolute inset-0 bg-[#ff7308] transform -translate-y-full transition-transform duration-500 group-hover:translate-y-0"></span>
-                  <span className="relative z-10 flex items-center gap-2">
-                    Get Started
-                    <ArrowRight className="w-5 h-5" />
-                  </span>
-                </Button>
-              </Link>
-            </motion.div>
-          </motion.div>
-
-          {/* Right Image */}
-          <motion.div
-            initial={{ opacity: 0, x: 50, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-            className="relative flex justify-center lg:justify-end"
-          >
-            <div className="relative w-full max-w-lg">
-              {/* Glow Effect */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-green-200/40 to-blue-200/40 rounded-full blur-3xl -z-10" />
-              
-              <motion.div
-                animate={{ y: [0, -20, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="relative z-10"
-              >
+        {/* 3D Dashboard Preview */}
+        <motion.div
+           style={{ rotateX, scale }}
+           initial={{ opacity: 0, y: 100 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 1, delay: 0.4 }}
+           className="relative mx-auto max-w-5xl perspective-1000"
+        >
+            <div className="relative rounded-2xl p-0 bg-transparent border-none shadow-none">
+                {/* Laptop Mockup Image */}
                 <img
-                  src="/assets/hero-img.png"
-                  alt="OrbitHR Dashboard"
-                  className="w-full h-auto object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-500"
+                    src="/assets/laptop-dashboard.png"
+                    alt="OrbitHR Dashboard on Laptop"
+                    className="w-full h-auto drop-shadow-2xl"
                 />
-              </motion.div>
             </div>
-          </motion.div>
-        </div>
+            
+            {/* Reflection Effect */}
+            <div className="absolute -bottom-20 left-[5%] right-[5%] h-20 bg-gradient-to-b from-zinc-200/50 to-transparent blur-2xl opacity-50" />
+        </motion.div>
+
       </div>
     </section>
   );

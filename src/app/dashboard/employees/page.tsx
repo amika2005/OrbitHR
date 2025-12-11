@@ -8,6 +8,7 @@ import { EmployeeTable } from "@/components/employees/EmployeeTable";
 import { Button } from "@/components/ui/button";
 import { UserPlus, Users, RefreshCw, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { CustomFieldManager } from "@/components/shared/CustomFieldManager";
 
 interface Employee {
   id: string;
@@ -33,7 +34,7 @@ export default function EmployeesPage() {
       const result = await getEmployees();
 
       if (result.success) {
-        setEmployees(result.employees);
+        setEmployees(result.employees as unknown as Employee[]);
       } else {
         toast.error(result.error || "Failed to fetch employees");
       }
@@ -79,6 +80,9 @@ export default function EmployeesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Custom Fields */}
+          <CustomFieldManager entityType="EMPLOYEE" />
+          
           <Button
             variant="outline"
             size="sm"

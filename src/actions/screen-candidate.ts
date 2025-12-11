@@ -141,7 +141,7 @@ export async function screenCandidate(
       // Fallback to company's default template
       const defaultTemplate = await db.screeningTemplate.findFirst({
         where: {
-          companyId: user.companyId,
+          companyId: user.companyId!,
           isDefault: true,
         },
         select: {

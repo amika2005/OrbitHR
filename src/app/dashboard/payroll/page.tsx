@@ -1,6 +1,7 @@
 import { getPayrollRecords } from "@/actions/payroll-actions";
 import { getEmployees } from "@/actions/employee-actions";
 import PayrollClient from "../../../components/payroll/PayrollClient";
+import { CustomFieldManager } from "@/components/shared/CustomFieldManager";
 
 export default async function PayrollPage({
   searchParams,
@@ -34,11 +35,16 @@ export default async function PayrollPage({
   };
 
   return (
-    <PayrollClient 
-      initialRecords={payrollRecords} 
-      summary={summary} 
-      initialMonth={month}
-      initialYear={year}
-    />
+    <div className="space-y-6">
+      <div className="flex items-center justify-end mb-4">
+        <CustomFieldManager entityType="PAYROLL" />
+      </div>
+      <PayrollClient 
+        initialRecords={payrollRecords} 
+        summary={summary} 
+        initialMonth={month}
+        initialYear={year}
+      />
+    </div>
   );
 }

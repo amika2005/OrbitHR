@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if user owns this request
-    if (leaveRequest.userId !== user.id) {
+    if (leaveRequest.employeeId !== user.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 

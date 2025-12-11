@@ -96,7 +96,7 @@ export async function createApplication(formData: FormData) {
         resumeUrl: uploadResult.url,
         coverLetter: coverLetter || undefined,
         portfolioUrl: portfolioUrl || undefined,
-        companyId: user.companyId,
+        companyId: user.companyId!,
         status: ApplicationStatus.NEW,
       },
     });
@@ -245,7 +245,7 @@ export async function getApplicationsByJob(jobId?: string) {
 
     const applications = await db.application.findMany({
       where: {
-        companyId: user.companyId,
+        companyId: user.companyId!,
         ...(jobId && { jobId }),
       },
       include: {

@@ -1,4 +1,6 @@
+// @ts-ignore
 import Imap from "imap";
+// @ts-ignore
 import { simpleParser } from "mailparser";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -43,14 +45,14 @@ export async function connectToGmail(email: string, password: string): Promise<I
 
 export async function fetchUnreadEmails(imap: Imap): Promise<EmailMessage[]> {
   return new Promise((resolve, reject) => {
-    imap.openBox("INBOX", false, (err) => {
+    imap.openBox("INBOX", false, (err: any) => {
       if (err) {
         reject(err);
         return;
       }
 
       // Search for unread emails
-      imap.search(["UNSEEN"], async (err, results) => {
+      imap.search(["UNSEEN"], async (err: any, results: any) => {
         if (err) {
           reject(err);
           return;
@@ -64,8 +66,8 @@ export async function fetchUnreadEmails(imap: Imap): Promise<EmailMessage[]> {
         const messages: EmailMessage[] = [];
         const fetch = imap.fetch(results, { bodies: "", markSeen: true });
 
-        fetch.on("message", (msg) => {
-          msg.on("body", async (stream) => {
+        fetch.on("message", (msg: any) => {
+          msg.on("body", async (stream: any) => {
             const parsed = await simpleParser(stream);
             
             const attachments: EmailAttachment[] = [];

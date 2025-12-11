@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/forgot-password",
   "/reset-password",
   "/api/webhooks(.*)", // Clerk webhooks
+  "/api/cron(.*)", // Cron jobs
+  "/survey(.*)", // Public surveys
   "/hris",
   "/ats",
   "/contact",

@@ -97,7 +97,7 @@ async function handleUserCreated(data: any) {
         email: primaryEmail,
         firstName: first_name || "",
         lastName: last_name || "",
-        role: userRole,
+        role: userRole as any,
         companyId: null, // Will be set when employee is created by HR
         createdAt: new Date(created_at),
       },

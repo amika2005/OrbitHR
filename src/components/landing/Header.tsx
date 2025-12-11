@@ -37,22 +37,23 @@ export function Header() {
   const headerBackground = useTransform(
     scrollY,
     [0, 100],
-    ["rgba(255, 255, 255, 0.8)", "rgba(255, 255, 255, 0.95)"]
+    ["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.8)"]
   );
   
-  const headerShadow = useTransform(
+  const headerBorder = useTransform(
     scrollY,
     [0, 100],
-    ["0 0 0 rgba(0, 0, 0, 0)", "0 1px 3px rgba(0, 0, 0, 0.1)"]
+    ["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0.05)"]
   );
 
   return (
     <motion.nav
       style={{
         backgroundColor: headerBackground,
-        boxShadow: headerShadow,
+        borderBottom: "1px solid",
+        borderColor: headerBorder,
       }}
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-gray-100"
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md transition-all duration-300"
     >
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-20">
@@ -65,7 +66,7 @@ export function Header() {
             >
               <span className="text-white font-bold text-lg">O</span>
             </motion.div>
-            <span className="text-2xl font-bold text-black tracking-tight">
+            <span className="text-2xl font-bold text-zinc-900 tracking-tight">
               OrbitHR
             </span>
           </Link>
@@ -82,7 +83,7 @@ export function Header() {
                 {item.submenu ? (
                   <>
                     <motion.button
-                      className="px-2 py-2 text-sm font-semibold text-gray-800 hover:text-black transition-colors flex items-center gap-1 relative group"
+                      className="px-2 py-2 text-sm font-semibold text-black hover:text-zinc-600 transition-colors flex items-center gap-1 relative group"
                       whileHover={{ y: -1 }}
                     >
                       {item.name}
@@ -96,7 +97,7 @@ export function Header() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-100 shadow-xl rounded-lg overflow-hidden"
+                        className="absolute top-full left-0 mt-2 w-56 bg-white border border-zinc-100 shadow-xl rounded-lg overflow-hidden"
                       >
                         <div className="py-2">
                           {item.submenu.map((subItem, index) => (
@@ -108,7 +109,7 @@ export function Header() {
                             >
                               <Link
                                 href={subItem.href}
-                                className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors"
+                                className="block px-4 py-3 text-sm text-zinc-500 hover:bg-zinc-50 hover:text-black transition-colors"
                               >
                                 {subItem.name}
                               </Link>
@@ -121,7 +122,7 @@ export function Header() {
                 ) : (
                   <Link 
                     href={item.href}
-                    className="text-sm font-semibold text-gray-800 hover:text-black transition-colors"
+                    className="text-sm font-semibold text-black hover:text-zinc-600 transition-colors"
                   >
                     {item.name}
                   </Link>
@@ -133,22 +134,21 @@ export function Header() {
           {/* Right Actions */}
           <div className="flex items-center gap-4">
             <Link href="/sign-in" className="hidden sm:block">
-              <Button variant="outline" className="relative overflow-hidden rounded-full border-2 border-transparent text-gray-700 hover:text-white group transition-all duration-300">
-                <span className="absolute inset-0 bg-[#ff7308] transform -translate-y-full transition-transform duration-500 group-hover:translate-y-0"></span>
-                <span className="relative z-10 px-6">Sign In</span>
+              <Button variant="ghost" className="text-zinc-600 hover:text-black hover:bg-zinc-100 rounded-full px-6">
+                Sign In
               </Button>
             </Link>
             
             <Link href="/dashboard">
-              <Button className="relative overflow-hidden bg-[#3ba156] hover:bg-[#3ba156] text-white font-bold px-6 rounded-full shadow-none border-2 border-transparent hover:border-[#ff7308] transition-all duration-300 group">
-                <span className="absolute inset-0 bg-[#ff7308] transform translate-y-full transition-transform duration-500 group-hover:translate-y-0"></span>
+              <Button className="relative overflow-hidden bg-black text-white font-bold px-6 rounded-full shadow-lg transition-all duration-300 group">
+                <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-purple-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left ease-out" />
                 <span className="relative z-10">Get Started</span>
               </Button>
             </Link>
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-black"
+              className="md:hidden p-2 text-white"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -162,7 +162,7 @@ export function Header() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          className="md:hidden border-t border-gray-200 bg-white"
+          className="md:hidden border-t border-zinc-200 bg-white"
         >
           <div className="px-6 py-4 space-y-4">
             {navItems.map((item) => (
@@ -171,7 +171,7 @@ export function Header() {
                   <>
                     <button
                       onClick={() => setActiveDropdown(activeDropdown === item.name ? null : item.name)}
-                      className="w-full flex items-center justify-between py-2 text-sm font-semibold text-gray-800 hover:text-black transition-colors"
+                      className="w-full flex items-center justify-between py-2 text-sm font-semibold text-black hover:text-zinc-600 transition-colors"
                     >
                       {item.name}
                       <ChevronDown className={`w-4 h-4 transition-transform ${activeDropdown === item.name ? 'rotate-180' : ''}`} />
@@ -187,7 +187,7 @@ export function Header() {
                           <Link
                             key={subItem.name}
                             href={subItem.href}
-                            className="block py-2 text-sm text-gray-600 hover:text-black transition-colors"
+                            className="block py-2 text-sm text-zinc-500 hover:text-black transition-colors"
                           >
                             {subItem.name}
                           </Link>
@@ -198,7 +198,7 @@ export function Header() {
                 ) : (
                   <Link 
                     href={item.href}
-                    className="block py-2 text-sm font-semibold text-gray-800 hover:text-black transition-colors"
+                    className="block py-2 text-sm font-semibold text-black hover:text-zinc-600 transition-colors"
                   >
                     {item.name}
                   </Link>
@@ -206,7 +206,7 @@ export function Header() {
               </div>
             ))}
             
-            <Link href="/sign-in" className="block py-2 text-sm font-semibold text-gray-800 hover:text-black transition-colors">
+            <Link href="/sign-in" className="block py-2 text-sm font-semibold text-black hover:text-zinc-600 transition-colors">
               Sign In
             </Link>
           </div>

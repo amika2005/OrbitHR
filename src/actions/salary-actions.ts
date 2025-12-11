@@ -142,7 +142,7 @@ export async function getAllSalaryStructures() {
     const salaryStructures = await db.salaryStructure.findMany({
       where: {
         employee: {
-          companyId: user.companyId,
+          companyId: user.companyId!,
         },
         isActive: true,
       },

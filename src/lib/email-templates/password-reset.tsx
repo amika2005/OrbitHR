@@ -89,11 +89,12 @@ export const PasswordResetEmail: React.FC<PasswordResetEmailProps> = ({
           <strong>ℹ️ Important Information:</strong><br />
           This password reset link will expire in <strong>1 hour</strong> for security reasons.
           If you don't reset your password within this time, you'll need to request a new link.
-          <li>Don't share your password with anyone</li>
-          <li>Change your password regularly</li>
-          <li>Enable two-factor authentication if available</li>
-        </ul>
-
+          <ul>
+            <li>Don't share your password with anyone</li>
+            <li>Change your password regularly</li>
+            <li>Enable two-factor authentication if available</li>
+          </ul>
+        </div>
         <p>
           If you have any concerns about your account security, please contact 
           your HR department immediately.

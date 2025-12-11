@@ -176,7 +176,7 @@ export function generatePayslipPDF(data: PayslipData): jsPDF {
     body: earningsData,
     theme: "striped",
     headStyles: {
-      fillColor: primaryColor,
+      fillColor: primaryColor as any, // Cast to avoid tuple mistmatch
       textColor: [255, 255, 255],
       fontStyle: "bold",
     },
@@ -224,7 +224,7 @@ export function generatePayslipPDF(data: PayslipData): jsPDF {
     body: deductionsData,
     theme: "striped",
     headStyles: {
-      fillColor: secondaryColor,
+      fillColor: secondaryColor as any,
       textColor: [255, 255, 255],
       fontStyle: "bold",
     },
@@ -255,7 +255,7 @@ export function generatePayslipPDF(data: PayslipData): jsPDF {
     },
     columnStyles: {
       0: { cellWidth: 120 },
-      1: { cellWidth: 60, halign: "right", textColor: primaryColor },
+      1: { cellWidth: 60, halign: "right", textColor: primaryColor as any },
     },
     margin: { left: 20, right: 20 },
   });

@@ -55,6 +55,10 @@ export async function createJob(data: z.infer<typeof jobSchema>) {
       return { success: false, error: "Insufficient permissions" };
     }
 
+    if (!user.companyId) {
+      return { success: false, error: "User must belong to a company" };
+    }
+
     // Validate data
     const validatedData = jobSchema.parse(data);
 
@@ -63,7 +67,7 @@ export async function createJob(data: z.infer<typeof jobSchema>) {
       data: {
         ...validatedData,
         status: JobStatus.DRAFT,
-        companyId: user.companyId,
+        companyId: user.companyId!,
       },
     });
 
@@ -290,9 +294,13 @@ export async function getJobs() {
       return { success: false, error: "User not found" };
     }
 
+    if (!user.companyId) {
+      return { success: false, error: "User must belong to a company" };
+    }
+
     // Get all jobs for the company
     const jobs = await db.job.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId! },
       orderBy: { createdAt: "desc" },
       include: {
         _count: {
@@ -328,11 +336,15 @@ export async function getJob(id: string) {
       return { success: false, error: "User not found" };
     }
 
+    if (!user.companyId) {
+      return { success: false, error: "User must belong to a company" };
+    }
+
     // Get job with applications
     const job = await db.job.findUnique({
       where: { 
         id,
-        companyId: user.companyId,
+        companyId: user.companyId!,
       },
       include: {
         applications: {

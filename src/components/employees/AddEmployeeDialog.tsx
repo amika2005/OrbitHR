@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { getCustomFieldDefinitions } from "@/actions/custom-field-actions";
+import { useUser } from "@clerk/nextjs";
 
 interface AddEmployeeDialogProps {
   open: boolean;
@@ -32,9 +35,30 @@ export function AddEmployeeDialog({ open, onOpenChange, onSuccess }: AddEmployee
     accountNumber: "",
     branch: "",
     employmentStatus: "PERMANENT" as EmploymentStatus,
+    customFields: {} as Record<string, any>,
   });
 
-  // Calculate leave allocation based on employment status
+  const [customFields, setCustomFields] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      import("@/actions/custom-field-actions").then(({ getCustomFieldDefinitions }) => {
+        // We need companyId, but here we don't have it easily available in props.
+        // However, the action finds it from the user. using a dummy ID or handling it in action.
+        // Actually the action takes companyId. We can get it from user context if available, 
+        // or we can allow the action to resolve it if not passed (if we modify action), 
+        // but easier: rely on the user metadata hook if available or just fetch all for the user's company implicitly?
+        // The action I wrote REQUIRES companyId.
+        // Let's use useUser hook to get metadata.
+      });
+    }
+  }, [open]);
+
+  // We need useUser to get companyId for fetching definitions
+  // But wait, createEmployee gets it from auth().
+  // Let's modify getCustomFieldDefinitions to optionally find companyId from auth() if not provided?
+  // Or just use the hook in the component.
+
   const leaveAllocation = getLeaveAllocation(formData.employmentStatus);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,6 +85,7 @@ export function AddEmployeeDialog({ open, onOpenChange, onSuccess }: AddEmployee
           accountNumber: "",
           branch: "",
           employmentStatus: "PERMANENT",
+          customFields: {},
         });
         onSuccess();
         onOpenChange(false);

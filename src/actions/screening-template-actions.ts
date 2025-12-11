@@ -137,7 +137,7 @@ export async function createScreeningTemplate(data: {
     // If setting as default, unset other defaults
     if (data.isDefault) {
       await db.screeningTemplate.updateMany({
-        where: { companyId: user.companyId, isDefault: true },
+        where: { companyId: user.companyId!, isDefault: true },
         data: { isDefault: false },
       });
     }
@@ -145,7 +145,7 @@ export async function createScreeningTemplate(data: {
     const template = await db.screeningTemplate.create({
       data: {
         ...data,
-        companyId: user.companyId,
+        companyId: user.companyId!,
       },
     });
 
@@ -205,7 +205,7 @@ export async function updateScreeningTemplate(
     // If setting as default, unset other defaults
     if (data.isDefault) {
       await db.screeningTemplate.updateMany({
-        where: { companyId: user.companyId, isDefault: true, id: { not: id } },
+        where: { companyId: user.companyId!, isDefault: true, id: { not: id } },
         data: { isDefault: false },
       });
     }
@@ -289,7 +289,7 @@ export async function getScreeningTemplates() {
     }
 
     const templates = await db.screeningTemplate.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId! },
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
       include: {
         _count: {
@@ -326,7 +326,7 @@ export async function initializeDefaultTemplates() {
 
     // Check if templates already exist
     const existingCount = await db.screeningTemplate.count({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId! },
     });
 
     if (existingCount > 0) {
@@ -339,7 +339,7 @@ export async function initializeDefaultTemplates() {
         db.screeningTemplate.create({
           data: {
             ...template,
-            companyId: user.companyId,
+            companyId: user.companyId!,
             isDefault: key === "BALANCED", // Set Balanced as default
             minPassingScore: 60,
             autoRejectThreshold: null, // No auto-reject by default

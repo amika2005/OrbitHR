@@ -27,6 +27,9 @@ const payrollSchema = z.object({
   bonuses: z.number().min(0, "Bonuses must be positive").optional(),
   country: z.nativeEnum(Country),
   currency: z.nativeEnum(Currency),
+  notes: z.string().optional(),
+  slip: z.string().optional(),
+  customFields: z.record(z.any()).optional(),
 });
 
 export async function generatePayroll(data: z.infer<typeof payrollSchema>) {
@@ -53,7 +56,7 @@ export async function generatePayroll(data: z.infer<typeof payrollSchema>) {
     const employee = await db.user.findUnique({
       where: { 
         id: validatedData.employeeId,
-        companyId: user.companyId,
+        companyId: user.companyId!,
       },
       select: { 
         salary: true,
@@ -98,6 +101,9 @@ export async function generatePayroll(data: z.infer<typeof payrollSchema>) {
         where: { id: existingPayroll.id },
         data: {
           ...payrollData,
+          notes: validatedData.notes,
+          slip: validatedData.slip,
+          customFields: validatedData.customFields || undefined,
           payDate: new Date(),
           isProcessed: true,
         },
@@ -107,7 +113,10 @@ export async function generatePayroll(data: z.infer<typeof payrollSchema>) {
       payroll = await db.payrollRecord.create({
         data: {
           ...payrollData,
-          companyId: user.companyId,
+          companyId: user.companyId!,
+          notes: validatedData.notes,
+          slip: validatedData.slip,
+          customFields: validatedData.customFields || undefined,
           payDate: new Date(),
           isProcessed: true,
         },
@@ -163,7 +172,7 @@ export async function batchGeneratePayroll(
 
     // Get company details for currency and country
     const company = await db.company.findUnique({
-      where: { id: user.companyId },
+      where: { id: user.companyId! },
       select: { currency: true, country: true },
     });
 
@@ -173,7 +182,7 @@ export async function batchGeneratePayroll(
 
     // Get employees
     const whereClause: any = {
-      companyId: user.companyId,
+      companyId: user.companyId!,
       role: "EMPLOYEE",
     };
 
@@ -234,7 +243,7 @@ export async function batchGeneratePayroll(
         await db.payrollRecord.create({
           data: {
             ...payrollData,
-            companyId: user.companyId,
+            companyId: user.companyId!,
             payDate: new Date(),
             isProcessed: true, // Mark as processed since it's generated
           },
@@ -279,7 +288,7 @@ export async function getPayrollRecords(
     }
 
     // Build where clause
-    const whereClause: any = { companyId: user.companyId };
+    const whereClause: any = { companyId: user.companyId! };
     if (month && year) {
       whereClause.month = month;
       whereClause.year = year;
@@ -315,7 +324,7 @@ export async function getPayrollRecords(
       count: payrollRecords.length,
       month,
       year,
-      companyId: user.companyId,
+      companyId: user.companyId!,
       records: payrollRecords.map(r => ({
         id: r.id,
         employeeId: r.employeeId,
@@ -453,6 +462,7 @@ export async function updatePayrollRecord(id: string, data: Partial<z.infer<type
         month: true,
         year: true,
         currency: true,
+        customFields: true,
         company: {
           select: {
             country: true,
@@ -491,6 +501,7 @@ export async function updatePayrollRecord(id: string, data: Partial<z.infer<type
         where: { id },
         data: {
           ...payrollData,
+          customFields: data.customFields ?? existingPayroll.customFields ?? undefined, // Preserves or updates custom fields
           isProcessed: true, // Mark as processed after regeneration
           payDate: new Date(),
           updatedAt: new Date(),

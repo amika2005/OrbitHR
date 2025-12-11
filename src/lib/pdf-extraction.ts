@@ -24,57 +24,55 @@ export interface ExtractedText {
  * Note: This requires PDF.js to be loaded and is client-side only
  */
 export async function extractTextFromPDF(file: File): Promise<ExtractedText> {
-  return new Promise((resolve, reject) => {
-    try {
-      // Check if PDF.js is available
-      if (typeof window === 'undefined' || !(window as any).pdfjsLib) {
-        throw new Error('PDF.js library not loaded. Please include PDF.js script.');
-      }
-
-      // Read file as ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
-      
-      // Load PDF document
-      const loadingTask = (window as any).pdfjsLib.getDocument({
-        data: arrayBuffer,
-      });
-
-      const pdf = await loadingTask.promise;
-      
-      // Extract text from all pages
-      const numPages = pdf.numPages;
-      const pages: ExtractedText['pages'] = [];
-      
-      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const textContent = await page.getTextContent();
-        
-        pages.push({
-          pageNumber: pageNum,
-          text: textContent.items.map((item: any) => item.str).join(' '),
-        });
-      }
-
-      // Get metadata
-      const metadata = await pdf.getMetadata();
-      
-      resolve({
-        text: pages.map(page => page.text).join('\n\n'),
-        pages,
-        metadata: {
-          title: metadata.info?.Title,
-          author: metadata.info?.Author,
-          subject: metadata.info?.Subject,
-          creator: metadata.info?.Creator,
-          producer: metadata.info?.Producer,
-          creationDate: metadata.info?.CreationDate ? new Date(metadata.info.CreationDate) : undefined,
-          modificationDate: metadata.info?.ModDate ? new Date(metadata.info.ModDate) : undefined,
-        },
-      });
-    } catch (error) {
-      reject(new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`));
+  try {
+    // Check if PDF.js is available
+    if (typeof window === 'undefined' || !(window as any).pdfjsLib) {
+      throw new Error('PDF.js library not loaded. Please include PDF.js script.');
     }
-  });
+
+    // Read file as ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Load PDF document
+    const loadingTask = (window as any).pdfjsLib.getDocument({
+      data: arrayBuffer,
+    });
+
+    const pdf = await loadingTask.promise;
+    
+    // Extract text from all pages
+    const numPages = pdf.numPages;
+    const pages: ExtractedText['pages'] = [];
+    
+    for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      
+      pages.push({
+        pageNumber: pageNum,
+        text: textContent.items.map((item: any) => item.str).join(' '),
+      });
+    }
+
+    // Get metadata
+    const metadata = await pdf.getMetadata();
+    
+    return {
+      text: pages.map(page => page.text).join('\n\n'),
+      pages,
+      metadata: {
+        title: metadata.info?.Title,
+        author: metadata.info?.Author,
+        subject: metadata.info?.Subject,
+        creator: metadata.info?.Creator,
+        producer: metadata.info?.Producer,
+        creationDate: metadata.info?.CreationDate ? new Date(metadata.info.CreationDate) : undefined,
+        modificationDate: metadata.info?.ModDate ? new Date(metadata.info.ModDate) : undefined,
+      },
+    };
+  } catch (error) {
+    throw new Error(`PDF extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
@@ -85,8 +83,9 @@ export async function extractTextFromPDFServer(pdfBuffer: Buffer): Promise<Extra
   try {
     // Dynamic import for server-side
     const pdfParse = await import('pdf-parse');
-    
-    const data = await pdfParse.default(pdfBuffer);
+    // @ts-ignore
+    const parse = pdfParse.default || pdfParse;
+    const data = await parse(pdfBuffer);
     
     return {
       text: data.text || '',
@@ -209,7 +208,7 @@ export function extractExperience(text: string): Array<{
   // Look for patterns like "X years at Company" or "Company Name - Position (Year)"
   const experiencePatterns = [
     /(\d+)\s*(?:years?|yrs?)\s*(?:at|@)\s*([A-Za-z0-9\s&]+)/gi,
-    /([A-Za-z0-9\s&]+)\s*[-–—]\s*([A-Za-z0-9\s&]+)\s*\((\d{4})\s*[-–—]?\s*(?:\d{4}|present))/gi,
+    /([A-Za-z0-9\s&]+)\s*[-–—]\s*([A-Za-z0-9\s&]+)\s*\((\d{4})\s*[-–—]?\s*(?:\d{4}|present)\)/gi,
     /([A-Za-z0-9\s&]+)\s*\|\s*([A-Za-z0-9\s&]+)\s*\|\s*(\d{4})\s*[-–—]?\s*(?:\d{4}|present)/gi,
   ];
 

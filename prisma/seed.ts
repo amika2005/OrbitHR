@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -75,7 +75,7 @@ async function main() {
       firstName: 'Amika',
       lastName: 'Fernando',
       email: 'amika@orbithr.test',
-      role: 'HR_MANAGER',
+      role: UserRole.HR_MANAGER,
       position: 'HR Manager',
       salary: 150000,
     },
@@ -83,7 +83,7 @@ async function main() {
       firstName: 'Kasun',
       lastName: 'Perera',
       email: 'kasun@orbithr.test',
-      role: 'EMPLOYEE',
+      role: UserRole.EMPLOYEE,
       position: 'Software Engineer',
       salary: 250000,
     },
@@ -91,7 +91,7 @@ async function main() {
       firstName: 'Nimal',
       lastName: 'Silva',
       email: 'nimal@orbithr.test',
-      role: 'EMPLOYEE',
+      role: UserRole.EMPLOYEE,
       position: 'Product Manager',
       salary: 300000,
     },

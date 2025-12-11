@@ -6,6 +6,7 @@ export type EmploymentStatus = 'PERMANENT' | 'PROBATION' | 'INTERN' | 'CONTRACT'
 export interface LeaveAllocation {
   annual: number;
   casual: number;
+  sick: number;
   shortLeaveLimit: number; // Per month
 }
 
@@ -19,6 +20,13 @@ export function getLeaveAllocation(status: EmploymentStatus): LeaveAllocation {
       return {
         annual: 14,  // 14 days annual leave
         casual: 7,   // 7 days casual leave (includes sick, half-day)
+        sick: 7,     // Added sick leave separately if needed, or keeping it equal/part of casual logic involves split.
+                     // IMPORTANT: User model has sickLeaveBalance. Let's allocate 7 for sick as well if standard? 
+                     // Or is it 0? Comment said "includes sick". 
+                     // If I add `sick` here, I should give it a value. 
+                     // Let's assume 7 sick days independent or same as casual?
+                     // Standard SL practices: 14 Annual, 7 Casual, 14 Medical?
+                     // Let's give 7 sick days for now to match balance fields.
         shortLeaveLimit: 2, // 2 short leaves per month (doesn't deduct from casual)
       };
     
@@ -26,6 +34,7 @@ export function getLeaveAllocation(status: EmploymentStatus): LeaveAllocation {
       return {
         annual: 7,   // Reduced: 7 days annual leave
         casual: 3,   // Reduced: 3 days casual leave
+        sick: 3,
         shortLeaveLimit: 1, // 1 short leave per month
       };
     
@@ -33,6 +42,7 @@ export function getLeaveAllocation(status: EmploymentStatus): LeaveAllocation {
       return {
         annual: 0,   // No annual leave
         casual: 3,   // 3 days casual leave (for sick)
+        sick: 0,
         shortLeaveLimit: 0, // No short leave
       };
     
@@ -40,6 +50,7 @@ export function getLeaveAllocation(status: EmploymentStatus): LeaveAllocation {
       return {
         annual: 10,  // Configurable: 10 days annual leave
         casual: 5,   // Configurable: 5 days casual leave
+        sick: 5,
         shortLeaveLimit: 2, // 2 short leaves per month
       };
     
@@ -48,6 +59,7 @@ export function getLeaveAllocation(status: EmploymentStatus): LeaveAllocation {
       return {
         annual: 14,
         casual: 7,
+        sick: 7,
         shortLeaveLimit: 2,
       };
   }

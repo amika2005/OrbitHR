@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +32,7 @@ import { generatePayslipEmail } from "@/lib/email-generator";
 import { getCompanyEmailSettings } from "@/actions/settings-actions";
 import { sendPayslipEmail } from "@/actions/email-actions";
 import { Mail, Send, Loader2, Settings } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 type Currency = "USD" | "LKR" | "JPY" | "EUR" | "GBP";
 
@@ -50,14 +51,19 @@ interface PayrollRecord {
   employeeName: string;
   employeeEmail?: string; // Employee email for distribution
   epfNumber?: string;
+  nicNumber?: string; // NIC or Passport number
   position?: string;
   department?: string;
+  employmentType?: string; // Full-time, Part-time, Contract, etc.
   dateOfJoining?: string;
   bankName?: string;
   branch?: string;
   accountNumber?: string;
   basicSalary: number;
+  workedDays: number; // Days worked in month (e.g., 28)
+  totalDays: number; // Total days in month (e.g., 30)
   allowances: {
+    fixed?: number;
     operational: number;
     wellBeing: number;
     utilityTravel: number;
@@ -71,9 +77,11 @@ interface PayrollRecord {
     other: number;
   };
   commission: number;
+  notes?: string; // Additional notes for payslip
   slip?: string; // Data URL of the PDF
   isGenerated: boolean;
   generatedAt?: string;
+  customFields?: Record<string, any>;
 }
 
 interface PayrollClientProps {
@@ -95,6 +103,7 @@ export default function PayrollClient({
   initialYear
 }: PayrollClientProps) {
   const router = useRouter();
+  const { user } = useUser();
   const [currency, setCurrency] = useState<Currency>("LKR");
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -103,12 +112,16 @@ export default function PayrollClient({
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
   
   // Email Distribution State
   const [showEmailSettings, setShowEmailSettings] = useState(false);
   const [isDistributing, setIsDistributing] = useState(false);
   const [distributionProgress, setDistributionProgress] = useState({ current: 0, total: 0 });
   const [showDistributionModal, setShowDistributionModal] = useState(false);
+  
+  // Ref to store generated slips locally to persist across router refreshes
+  const generatedSlipsRef = useRef<Record<string, string>>({});
 
   const isIntern = (position?: string) => {
     return position?.toLowerCase().includes('intern') || false;
@@ -130,6 +143,7 @@ export default function PayrollClient({
   };
 
   const calculateNetPay = (record: PayrollRecord) => {
+    // Attendance is for display only - no salary deduction
     const epf = calculateEPF(record.basicSalary, record.position);
     // ETF is employer contribution, not deducted from employee
     const allowances = record.allowances || {
@@ -171,9 +185,35 @@ export default function PayrollClient({
       }
     };
 
+    // Load custom field definitions
+    if (user?.publicMetadata?.companyId) {
+      import("@/actions/custom-field-actions").then(async ({ getCustomFieldDefinitions }) => {
+        const result = await getCustomFieldDefinitions(user.publicMetadata.companyId as string, "PAYROLL");
+        if (result.success) {
+          setCustomFieldDefs(result.data || []);
+        }
+      });
+    }
+
     const savedSettings = localStorage.getItem("company_settings");
     if (savedSettings) {
-      setCompanySettings(JSON.parse(savedSettings));
+      const settings = JSON.parse(savedSettings);
+      // Update company name to correct value permanently
+      settings.companyName = "Infinit Tech Systems (PVT) LTD";
+      setCompanySettings(settings);
+      localStorage.setItem("company_settings", JSON.stringify(settings));
+    } else {
+      // Set default company settings if none exist
+      const defaultSettings = {
+        companyName: "Infinit Tech Systems (PVT) LTD",
+        address: "Level 35, West Tower, World Trade Center, Colombo 01, Sri Lanka",
+        phone: "+94 11 749 4398",
+        mobile: "+94 77 029 1591",
+        email: "hr@infinit.lk",
+        pvNumber: "00338004"
+      };
+      setCompanySettings(defaultSettings);
+      localStorage.setItem("company_settings", JSON.stringify(defaultSettings));
     }
 
     const mappedRecords = initialRecords.map(r => {
@@ -186,6 +226,9 @@ export default function PayrollClient({
         hasEPF: !!r.employee?.epfNumber,
         otherDeductions: (r as any).otherDeductions,
       });
+
+      // Get days in current month for default values
+      const daysInMonth = new Date(year, month, 0).getDate();
 
       const record = {
         id: r.id,
@@ -201,6 +244,8 @@ export default function PayrollClient({
         branch: r.employee?.branch || "",
         accountNumber: r.employee?.accountNumber || "",
         basicSalary: Number(r.basicSalary),
+        workedDays: Number((r.otherDeductions as any)?.workedDays || daysInMonth),
+        totalDays: Number((r.otherDeductions as any)?.totalDays || daysInMonth),
         allowances: {
           operational: Number((r.allowances as any)?.operational || 0),
           wellBeing: Number((r.allowances as any)?.wellBeing || 0),
@@ -217,7 +262,9 @@ export default function PayrollClient({
         commission: Number(r.bonuses),
         isGenerated: r.isProcessed,
         generatedAt: r.updatedAt,
-        slip: undefined as string | undefined,
+        // Check if we have a locally generated slip OR one from DB
+        slip: r.slip || generatedSlipsRef.current[r.id],
+        notes: r.notes || "",
       };
 
       // If the record is already processed, regenerate the payslip PDF
@@ -249,7 +296,7 @@ export default function PayrollClient({
           accountNumber: record.accountNumber,
           companyName: settings?.companyName || "OrbitHR Inc.",
           companyAddress: settings?.address || "123 Business Rd, Tech City",
-          companyLogo: settings?.logo || "",
+          companyLogo: "/assets/payslip_logo.png",
         });
       }
 
@@ -328,12 +375,17 @@ export default function PayrollClient({
   };
 
   const addNewRow = () => {
+    // Get days in current month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
     const newRecord: PayrollRecord = {
       id: `new-${Date.now()}`,
       employeeId: "",
       customEmployeeId: "",
       employeeName: "",
       basicSalary: 0,
+      workedDays: daysInMonth, // Default to full month
+      totalDays: daysInMonth,
       allowances: {
         operational: 0,
         wellBeing: 0,
@@ -393,6 +445,49 @@ export default function PayrollClient({
     );
   };
 
+  // Helper function to load logo as base64 with resizing and compression
+  const loadLogoAsBase64 = async (): Promise<string> => {
+    try {
+      const response = await fetch('/assets/payslip_logo.png');
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            // Resize logic
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 500; // Limit width to 500px
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            // Use PNG to preserve transparency and quality
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
+            resolve(dataUrl);
+          };
+          img.onerror = reject;
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error loading logo:', error);
+      return '';
+    }
+  };
+
   const generatePayroll = async (record: PayrollRecord) => {
     if (!record.employeeName || record.basicSalary === 0) {
       toast.error("Please fill in employee name and basic salary");
@@ -409,48 +504,28 @@ export default function PayrollClient({
     const netPay = calculateNetPay(record);
 
     try {
-        let result;
+        console.log("🚀 Starting payroll generation for:", record.employeeName);
         
-        // If it's a new record, create it
-        if (record.id.startsWith("new-")) {
-          result = await generatePayrollAction({
-              employeeId: record.employeeId,
-              month: month,
-              year: year,
-              basicSalary: record.basicSalary,
-              allowances: record.allowances,
-              bonuses: record.commission,
-              deductions: record.deductions,
-              country: "SRI_LANKA" as any,
-              currency: "LKR" as any,
-          });
-        } else {
-          // If it's an existing record, update it
-          result = await updatePayrollRecord(record.id, {
-            basicSalary: record.basicSalary,
-            allowances: record.allowances,
-            deductions: record.deductions,
-            bonuses: record.commission,
-          });
-        }
+        // 1. Load logo as base64 first
+        const logoBase64 = await loadLogoAsBase64();
+        console.log("✅ Logo loaded, length:", logoBase64?.length || 0);
 
-        if (!result.success) {
-            toast.error(result.error || "Failed to save payroll record");
-            return;
-        }
-
-        // Generate Advanced PDF Payslip
+        // 2. Generate Advanced PDF Payslip FIRST (so we can save it)
         const slip = generatePayslipPDF({
           employeeName: record.employeeName,
           employeeId: record.customEmployeeId || record.employeeId,
           epfNumber: record.epfNumber,
+          nicNumber: record.nicNumber,
           designation: record.position || "Employee",
           department: record.department || "General",
+          employmentType: record.employmentType || "Full-time",
           dateOfJoining: record.dateOfJoining || new Date().toISOString().split('T')[0],
           payPeriod: new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
-          workedDays: 30,
+          workedDays: record.workedDays,
+          totalDays: record.totalDays,
           basicSalary: record.basicSalary,
           allowances: record.allowances || {
+            fixed: 0,
             operational: 0,
             wellBeing: 0,
             utilityTravel: 0,
@@ -471,17 +546,70 @@ export default function PayrollClient({
           bankName: record.bankName,
           branch: record.branch,
           accountNumber: record.accountNumber,
-          companyName: companySettings?.companyName || "OrbitHR Inc.",
+          notes: record.notes,
+          companyName: companySettings?.companyName || "Infinit Tech Systems (PVT) LTD",
           companyAddress: companySettings?.address || "123 Business Rd, Tech City",
-          companyLogo: companySettings?.logo || "",
+          companyPhone: companySettings?.phone || "",
+          companyMobile: companySettings?.mobile || "",
+          companyEmail: companySettings?.email || "",
+          companyPvNumber: companySettings?.pvNumber || "",
+          companyLogo: logoBase64 || "/assets/payslip_logo.png",
         });
+        
+        console.log("✅ PDF generated, size:", slip?.length || 0, "bytes");
+        console.log("📝 Notes:", record.notes || "none");
 
-        // Update record with slip and new ID if it was new
+        // 3. Call Server Action to Save Data + Slip + Notes
+        let result;
+        
+        // If it's a new record, create it
+        if (record.id.startsWith("new-")) {
+          console.log("📤 Creating new payroll record...");
+          result = await generatePayrollAction({
+              employeeId: record.employeeId,
+              month: month,
+              year: year,
+              basicSalary: record.basicSalary,
+              allowances: record.allowances,
+              bonuses: record.commission,
+              deductions: record.deductions,
+              country: "SRI_LANKA" as any,
+              currency: "LKR" as any,
+              notes: record.notes, // Persist Notes
+              slip: slip,          // Persist Slip
+              customFields: record.customFields, // Persist Custom Fields
+          });
+        } else {
+          console.log("📤 Updating existing payroll record:", record.id);
+          result = await updatePayrollRecord(record.id, {
+            basicSalary: record.basicSalary,
+            allowances: record.allowances,
+            deductions: record.deductions,
+            bonuses: record.commission,
+            notes: record.notes, // Persist Notes
+            slip: slip,          // Persist Slip
+            customFields: record.customFields, // Persist Custom Fields
+          });
+        }
+
+        console.log("📥 Server response:", result);
+
+        if (!result.success) {
+            console.error("❌ Server action failed:", result.error);
+            toast.error(result.error || "Failed to save payroll record");
+            return;
+        }
+
+        console.log("✅ Server save successful, returned ID:", result.data?.id);
+
+        // 4. Update Local State & Ref (Redundant if persistent, but keeps UI fast)
+        generatedSlipsRef.current[record.id] = slip;
+
         setPayrollRecords(records =>
           records.map(r =>
             r.id === record.id ? { 
               ...r, 
-              id: result.data?.id || r.id,
+              id: result.data?.id || r.id, // Update ID from server result
               slip, 
               isGenerated: true, 
               generatedAt: new Date().toISOString() 
@@ -489,10 +617,13 @@ export default function PayrollClient({
           )
         );
 
+        console.log("✅ Local state updated with slip");
+        console.log("📊 Final record state:", { id: result.data?.id || record.id, hasSlip: !!slip, slipLength: slip?.length });
         toast.success("Payroll generated and saved successfully!");
-        router.refresh();
+        // Don't refresh - it overwrites local state before server data is ready
+        // router.refresh();
     } catch (error) {
-        console.error(error);
+        console.error("❌ Generation error:", error);
         toast.error("An unexpected error occurred");
     }
   };
@@ -787,13 +918,24 @@ export default function PayrollClient({
                   Basic Salary
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  Attendance
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Allowances
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Deductions
                 </th>
+                {customFieldDefs.map((def) => (
+                  <th key={def.name} className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    {def.label}
+                  </th>
+                ))}
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   Commission
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                  Notes
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                   EPF
@@ -812,7 +954,7 @@ export default function PayrollClient({
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {payrollRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  <td colSpan={12} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
                     No payroll records for this month. Click "Add Employee" to create a new record.
                   </td>
                 </tr>
@@ -902,6 +1044,36 @@ export default function PayrollClient({
                             className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                             placeholder="0"
                           />
+                        )}
+                      </td>
+                      {/* Attendance Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {record.isGenerated ? (
+                          <span className="text-sm text-zinc-900 dark:text-white font-mono">
+                            {record.workedDays}/{record.totalDays}
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              value={record.workedDays || ""}
+                              onChange={(e) => updateRecord(record.id, 'workedDays', Number(e.target.value))}
+                              className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-14 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-center font-mono"
+                              placeholder="28"
+                              min="0"
+                              max={record.totalDays}
+                            />
+                            <span className="text-zinc-500 dark:text-zinc-400">/</span>
+                            <input
+                              type="number"
+                              value={record.totalDays || ""}
+                              onChange={(e) => updateRecord(record.id, 'totalDays', Number(e.target.value))}
+                              className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-14 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-center font-mono"
+                              placeholder="30"
+                              min="1"
+                              max="31"
+                            />
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1080,6 +1252,30 @@ export default function PayrollClient({
                           </div>
                         )}
                       </td>
+                      
+                      {/* Dynamic Custom Fields */}
+                      {customFieldDefs.map((def) => (
+                        <td key={def.name} className="px-6 py-4 whitespace-nowrap">
+                          {record.isGenerated ? (
+                             <span className="text-sm text-zinc-900 dark:text-white">
+                                {record.customFields?.[def.name] || '-'}
+                             </span>
+                          ) : (
+                            <input
+                              type={def.type === "NUMBER" ? "number" : "text"}
+                              value={record.customFields?.[def.name] || ""}
+                              onChange={(e) => {
+                                const newVal = def.type === "NUMBER" ? Number(e.target.value) : e.target.value;
+                                const newCustomFields = { ...record.customFields, [def.name]: newVal };
+                                updateRecord(record.id, 'customFields', newCustomFields);
+                              }}
+                              className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                              placeholder={def.label}
+                            />
+                          )}
+                        </td>
+                      ))}
+                      
                       <td className="px-6 py-4 whitespace-nowrap">
                         {record.isGenerated ? (
                           <span className="text-sm text-zinc-900 dark:text-white">
@@ -1092,6 +1288,22 @@ export default function PayrollClient({
                             onChange={(e) => updateRecord(record.id, 'commission', Number(e.target.value))}
                             className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                             placeholder="0"
+                          />
+                        )}
+                      </td>
+                      {/* Notes Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {record.isGenerated ? (
+                          <span className="text-sm text-zinc-600 dark:text-zinc-400 max-w-[100px] truncate block">
+                            {record.notes || '-'}
+                          </span>
+                        ) : (
+                          <input
+                            type="text"
+                            value={record.notes || ""}
+                            onChange={(e) => updateRecord(record.id, 'notes', e.target.value)}
+                            className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-32 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                            placeholder="Notes..."
                           />
                         )}
                       </td>
@@ -1190,10 +1402,24 @@ export default function PayrollClient({
               </div>
             </div>
             <div className="flex-1 bg-zinc-100 dark:bg-zinc-950 p-4 overflow-hidden">
+               {/* Convert Data URI to Blob for reliable iframe display */}
               <iframe 
-                src={`${selectedSlip}#toolbar=0&view=FitH`} 
-                className="w-full h-full rounded border border-zinc-200 dark:border-zinc-800 shadow-sm bg-white"
-                title="Payslip PDF"
+                src={(() => {
+                    try {
+                        const byteString = atob(selectedSlip.split(',')[1]);
+                        const ab = new ArrayBuffer(byteString.length);
+                        const ia = new Uint8Array(ab);
+                        for (let i = 0; i < byteString.length; i++) {
+                            ia[i] = byteString.charCodeAt(i);
+                        }
+                        const blob = new Blob([ab], { type: 'application/pdf' });
+                        return URL.createObjectURL(blob);
+                    } catch (e) {
+                        return selectedSlip;
+                    }
+                })()} 
+                className="w-full h-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white"
+                title="Payslip Preview"
               />
             </div>
           </div>
