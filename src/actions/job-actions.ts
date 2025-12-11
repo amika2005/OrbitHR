@@ -169,6 +169,7 @@ export async function publishJob(id: string) {
     });
 
     revalidatePath("/dashboard/jobs");
+    revalidatePath(`/dashboard/jobs/${id}`);
     return { success: true, data: updatedJob };
   } catch (error) {
     console.error("Publish Job Error:", error);
@@ -177,6 +178,12 @@ export async function publishJob(id: string) {
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+// Form action wrapper for publishJob
+export async function publishJobAction(formData: FormData) {
+  const id = formData.get("jobId") as string;
+  await publishJob(id);
 }
 
 export async function closeJob(id: string) {
@@ -216,6 +223,7 @@ export async function closeJob(id: string) {
     });
 
     revalidatePath("/dashboard/jobs");
+    revalidatePath(`/dashboard/jobs/${id}`);
     return { success: true, data: updatedJob };
   } catch (error) {
     console.error("Close Job Error:", error);
@@ -224,6 +232,12 @@ export async function closeJob(id: string) {
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
+}
+
+// Form action wrapper for closeJob
+export async function closeJobAction(formData: FormData) {
+  const id = formData.get("jobId") as string;
+  await closeJob(id);
 }
 
 export async function deleteJob(id: string) {

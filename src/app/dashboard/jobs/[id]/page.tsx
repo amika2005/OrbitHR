@@ -1,4 +1,4 @@
-import { getJob, publishJob, closeJob } from "@/actions/job-actions";
+import { getJob } from "@/actions/job-actions";
 import { getApplicationsByJob } from "@/actions/application-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, DollarSign, Briefcase, Users, Calendar } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JobActions } from "./JobActions";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function JobDetailPage({
   params,
@@ -15,14 +17,14 @@ export default async function JobDetailPage({
   params: { id: string };
 }) {
   let job = null;
-  let applications = [];
+  let applications: any[] = [];
 
   try {
     const jobResult = await getJob(params.id);
     if (jobResult.success && jobResult.data) {
       job = jobResult.data;
       const applicationsResult = await getApplicationsByJob(params.id);
-      applications = applicationsResult.success ? applicationsResult.data : [];
+      applications = applicationsResult.success && applicationsResult.data ? applicationsResult.data : [];
     }
   } catch (error) {
     console.error("Error fetching job:", error);
@@ -87,22 +89,7 @@ export default async function JobDetailPage({
 
       {/* Action Buttons */}
       <div className="flex gap-3">
-        {job.status === "DRAFT" && (
-          <form action={async () => {
-            "use server";
-            await publishJob(job.id);
-          }}>
-            <Button type="submit">Publish Job</Button>
-          </form>
-        )}
-        {job.status === "OPEN" && (
-          <form action={async () => {
-            "use server";
-            await closeJob(job.id);
-          }}>
-            <Button variant="outline">Close Job</Button>
-          </form>
-        )}
+        <JobActions jobId={job.id} status={job.status} />
         <Link href={`/dashboard/jobs/${job.id}/edit`}>
           <Button variant="outline">Edit Job</Button>
         </Link>

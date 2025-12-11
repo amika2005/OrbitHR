@@ -29,6 +29,7 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
+  output: 'standalone',
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push({
