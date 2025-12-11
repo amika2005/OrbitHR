@@ -14,15 +14,31 @@ export default async function JobDetailPage({
 }: {
   params: { id: string };
 }) {
-  const jobResult = await getJob(params.id);
-  
-  if (!jobResult.success || !jobResult.data) {
-    notFound();
-  }
+  let job = null;
+  let applications = [];
 
-  const job = jobResult.data;
-  const applicationsResult = await getApplicationsByJob(params.id);
-  const applications = applicationsResult.success ? applicationsResult.data : [];
+  try {
+    const jobResult = await getJob(params.id);
+    if (jobResult.success && jobResult.data) {
+      job = jobResult.data;
+      const applicationsResult = await getApplicationsByJob(params.id);
+      applications = applicationsResult.success ? applicationsResult.data : [];
+    }
+  } catch (error) {
+    console.error("Error fetching job:", error);
+  }
+  
+  if (!job) {
+    return (
+      <div className="p-8 text-center">
+        <h2 className="text-xl font-semibold text-red-600">Job not found</h2>
+        <p className="text-gray-500 mt-2">The job you are looking for does not exist or an error occurred.</p>
+        <Link href="/dashboard/jobs">
+          <Button variant="outline" className="mt-4">Back to Jobs</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const statusColors: Record<string, string> = {
     DRAFT: "bg-gray-100 text-gray-800",
