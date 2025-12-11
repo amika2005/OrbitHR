@@ -15,7 +15,7 @@ git add .
 git commit -m "OrbitHR ready for deployment"
 
 # GitHub ekata push karanna (first create repo on github.com)
-git remote add origin https://github.com/YOUR_USERNAME/OrbitHR.git
+git remote add origin https://github.com/amika2005/OrbitHR.git
 git branch -M main
 git push -u origin main
 ```

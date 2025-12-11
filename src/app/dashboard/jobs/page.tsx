@@ -6,6 +6,8 @@ import { getJobs } from "@/actions/job-actions";
 import { Plus, Briefcase, MapPin, DollarSign, Users, TrendingUp, FileText } from "lucide-react";
 import { JobStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export default async function JobsPage() {
   const result = await getJobs();
   const jobs = result.success ? result.data : [];
