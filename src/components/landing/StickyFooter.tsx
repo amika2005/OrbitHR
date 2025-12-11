@@ -56,7 +56,7 @@ export function StickyFooter() {
         </div>
         
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-gray-500 text-sm">
-          <p>© 2024 OrbitHR Inc. All rights reserved.</p>
+          <p>© 2025 OrbitHR Inc. All rights reserved.</p>
           <div className="flex gap-8">
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>

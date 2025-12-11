@@ -24,10 +24,8 @@ import {
   Mail,
   Linkedin,
   MoreHorizontal,
-  Filter,
-  RefreshCw,
   Search,
-  ChevronDown,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,82 +38,12 @@ import {
 } from "@/components/ui/select";
 import { HiringFunnelWidget } from "./HiringFunnelWidget";
 import { CandidateDrawer } from "./CandidateDrawer";
+import { PipelineCandidate } from "@/actions/candidate-actions";
+import Link from "next/link";
+import { Card, CardContent } from "../ui/card";
 
 // --- Types ---
-
 type StageId = "inbox" | "screening" | "interview" | "offer" | "hired";
-
-interface Candidate {
-  id: string;
-  name: string;
-  role: string;
-  exp: string;
-  aiScore: number;
-  source: "mail" | "linkedin";
-  sourceBy: string;
-  stage: StageId;
-  department: "IT" | "Marketing" | "Finance";
-}
-
-// --- Mock Data ---
-
-const initialCandidates: Candidate[] = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    role: "Senior Frontend Engineer",
-    exp: "5y Exp • React Native",
-    aiScore: 92,
-    source: "linkedin",
-    sourceBy: "hr.manager@orbithr.com",
-    stage: "inbox",
-    department: "IT",
-  },
-  {
-    id: "2",
-    name: "Michael Ross",
-    role: "Senior Frontend Engineer",
-    exp: "7y Exp • Full Stack",
-    aiScore: 88,
-    source: "mail",
-    sourceBy: "careers@orbithr.com",
-    stage: "screening",
-    department: "IT",
-  },
-  {
-    id: "3",
-    name: "Jessica Wu",
-    role: "Product Manager",
-    exp: "4y Exp • SaaS",
-    aiScore: 95,
-    source: "linkedin",
-    sourceBy: "hr.manager@orbithr.com",
-    stage: "interview",
-    department: "Marketing",
-  },
-  {
-    id: "4",
-    name: "David Miller",
-    role: "Financial Analyst",
-    exp: "6y Exp • CPA",
-    aiScore: 82,
-    source: "mail",
-    sourceBy: "careers@orbithr.com",
-    stage: "offer",
-    department: "Finance",
-  },
-  {
-    id: "5",
-    name: "Emily Davis",
-    role: "UX Designer",
-    exp: "3y Exp • Figma",
-    aiScore: 78,
-    source: "linkedin",
-    sourceBy: "hr.manager@orbithr.com",
-    stage: "inbox",
-    department: "IT",
-  },
-];
 
 const stages: { id: StageId; title: string }[] = [
   { id: "inbox", title: "Inbox" },
@@ -127,7 +55,7 @@ const stages: { id: StageId; title: string }[] = [
 
 // --- Components ---
 
-function CandidateCard({ candidate, onClick }: { candidate: Candidate; onClick?: () => void }) {
+function CandidateCard({ candidate, onClick }: { candidate: PipelineCandidate; onClick?: () => void }) {
   const {
     attributes,
     listeners,
@@ -164,7 +92,7 @@ function CandidateCard({ candidate, onClick }: { candidate: Candidate; onClick?:
 
       {/* Middle Row */}
       <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 font-medium">
-        {candidate.exp}
+        {candidate.role}
       </p>
 
       {/* Footer */}
@@ -175,7 +103,7 @@ function CandidateCard({ candidate, onClick }: { candidate: Candidate; onClick?:
           ) : (
             <Mail className="h-3 w-3 mr-1.5" />
           )}
-          <span className="truncate max-w-[120px]">Via: {candidate.sourceBy}</span>
+          <span className="truncate max-w-[120px]">{candidate.sourceBy}</span>
         </div>
         <Button
           variant="ghost"
@@ -195,8 +123,8 @@ function PipelineColumn({
   onCandidateClick,
 }: {
   stage: { id: StageId; title: string };
-  candidates: Candidate[];
-  onCandidateClick: (candidate: Candidate) => void;
+  candidates: PipelineCandidate[];
+  onCandidateClick: (candidate: PipelineCandidate) => void;
 }) {
   return (
     <div className="flex-1 min-w-[260px] flex flex-col h-full">
@@ -234,12 +162,16 @@ function PipelineColumn({
   );
 }
 
-export function RecruitmentPipeline() {
-  const [candidates, setCandidates] = useState<Candidate[]>(initialCandidates);
+interface RecruitmentPipelineProps {
+  initialCandidates: PipelineCandidate[];
+}
+
+export function RecruitmentPipeline({ initialCandidates }: RecruitmentPipelineProps) {
+  const [candidates, setCandidates] = useState<PipelineCandidate[]>(initialCandidates);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [selectedJob, setSelectedJob] = useState("Senior Frontend Engineer");
+  const [selectedJob, setSelectedJob] = useState("All Roles");
   const [selectedDept, setSelectedDept] = useState("All");
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<PipelineCandidate | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -251,6 +183,36 @@ export function RecruitmentPipeline() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // If no candidates exist at all, show Empty State
+  if (initialCandidates.length === 0) {
+    return (
+      <div className="flex flex-col h-[calc(100vh-4rem)] bg-white dark:bg-black p-8">
+        <h1 className="text-2xl font-bold mb-8 text-zinc-900 dark:text-white">Recruitment Pipeline</h1>
+        <div className="flex-1 flex items-center justify-center">
+          <Card className="border-2 border-dashed border-zinc-200 dark:border-zinc-800 max-w-md w-full shadow-none bg-zinc-50/50 dark:bg-zinc-900/50">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-6">
+                <Briefcase className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">
+                No active candidates
+              </h3>
+              <p className="text-zinc-500 dark:text-zinc-400 mb-8 text-center">
+                Your pipeline is empty. Post a job to start receiving applications.
+              </p>
+              <Link href="/dashboard/jobs/new">
+                <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Post a Job
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -270,8 +232,6 @@ export function RecruitmentPipeline() {
       return;
     }
 
-    // Find the stage we dropped over
-    // It could be a container (stage id) or another item (candidate id)
     let overStageId: StageId | undefined;
 
     if (stages.some((s) => s.id === over.id)) {
@@ -284,6 +244,7 @@ export function RecruitmentPipeline() {
     }
 
     if (overStageId && activeCandidate.stage !== overStageId) {
+      // TODO: Call server action to update status in DB
       setCandidates((prev) =>
         prev.map((c) =>
           c.id === activeCandidate.id ? { ...c, stage: overStageId! } : c
@@ -301,7 +262,7 @@ export function RecruitmentPipeline() {
   // Filter Logic
   const filteredCandidates = candidates.filter((c) => {
     const jobMatch =
-      selectedJob === "All Roles" || c.role === selectedJob; // Simplified for demo
+      selectedJob === "All Roles" || c.role === selectedJob; 
     const deptMatch = selectedDept === "All" || c.department === selectedDept;
     return jobMatch && deptMatch;
   });
@@ -322,12 +283,10 @@ export function RecruitmentPipeline() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All Roles">All Roles</SelectItem>
-                <SelectItem value="Senior Frontend Engineer">
-                  Senior Frontend Engineer
-                </SelectItem>
-                <SelectItem value="Product Manager">Product Manager</SelectItem>
-                <SelectItem value="Financial Analyst">Financial Analyst</SelectItem>
-                <SelectItem value="UX Designer">UX Designer</SelectItem>
+                {/* Unique roles from candidates */}
+                {Array.from(new Set(candidates.map(c => c.role))).map(role => (
+                   <SelectItem key={role} value={role}>{role}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -357,7 +316,7 @@ export function RecruitmentPipeline() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
               <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">
-                Live Sync: careers@ & hr@orbithr.com
+                Live Sync: Active
               </span>
             </div>
             <Button variant="outline" size="icon" className="h-9 w-9 border-zinc-200 dark:border-zinc-800">
@@ -381,7 +340,7 @@ export function RecruitmentPipeline() {
                 key={stage.id}
                 stage={stage}
                 candidates={filteredCandidates.filter((c) => c.stage === stage.id)}
-                onCandidateClick={setSelectedCandidate}
+                onCandidateClick={(c) => setSelectedCandidate(c as any)} // Cast back to any because Card expects internal type but we use shared type
               />
             ))}
           </div>
@@ -398,7 +357,7 @@ export function RecruitmentPipeline() {
 
       {/* Candidate Drawer */}
       <CandidateDrawer 
-        candidate={selectedCandidate} 
+        candidate={selectedCandidate as any} // Cast for compatibility
         onClose={() => setSelectedCandidate(null)} 
       />
     </div>

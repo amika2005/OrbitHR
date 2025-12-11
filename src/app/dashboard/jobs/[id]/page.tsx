@@ -1,5 +1,4 @@
 import { getJob } from "@/actions/job-actions";
-import { getApplicationsByJob } from "@/actions/application-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +22,13 @@ export default async function JobDetailPage({
     const jobResult = await getJob(params.id);
     if (jobResult.success && jobResult.data) {
       job = jobResult.data;
-      const applicationsResult = await getApplicationsByJob(params.id);
-      applications = applicationsResult.success && applicationsResult.data ? applicationsResult.data : [];
+      try {
+        const { getApplicationsByJob } = await import("@/actions/application-actions");
+      applications = [];
+} catch (e) {
+        console.error("getApplicationsByJob import/fetch failed:", e);
+        applications = [];
+      }
     }
   } catch (error) {
     console.error("Error fetching job:", error);
@@ -72,7 +76,7 @@ export default async function JobDetailPage({
                 </div>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
-                  {job.currency} {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                  {job.currency ?? ""} {(job.salaryMin != null ? Number(job.salaryMin).toLocaleString() : "-")} - {(job.salaryMax != null ? Number(job.salaryMax).toLocaleString() : "-")}
                 </div>
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4" />
@@ -126,7 +130,7 @@ export default async function JobDetailPage({
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {job.keySkills.map((skill) => (
+                {(job.keySkills ?? []).map((skill) => (
                   <Badge key={skill} variant="secondary">
                     {skill}
                   </Badge>
@@ -198,16 +202,16 @@ export default async function JobDetailPage({
                       >
                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                           <span className="text-blue-600 font-semibold text-xs">
-                            {app.candidate.firstName[0]}
-                            {app.candidate.lastName[0]}
+                            {app.candidate?.firstName?.[0] ?? ""}
+                            {app.candidate?.lastName?.[0] ?? ""}
                           </span>
                         </div>
                         <div className="flex-1">
                           <div className="font-medium">
-                            {app.candidate.firstName} {app.candidate.lastName}
+                            {app.candidate?.firstName ?? ""} {app.candidate?.lastName ?? ""}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {app.status.replace("_", " ")}
+                            {app.status ? app.status.replace("_", " ") : ""}
                           </div>
                         </div>
                       </div>
@@ -222,3 +226,5 @@ export default async function JobDetailPage({
     </div>
   );
 }
+
+

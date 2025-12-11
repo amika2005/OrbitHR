@@ -32,9 +32,10 @@ interface Employee {
 interface EmployeeTableProps {
   employees: Employee[];
   onRefresh: () => void;
+  onAddEmployee: () => void;
 }
 
-export function EmployeeTable({ employees, onRefresh }: EmployeeTableProps) {
+export function EmployeeTable({ employees, onRefresh, onAddEmployee }: EmployeeTableProps) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -95,14 +96,19 @@ export function EmployeeTable({ employees, onRefresh }: EmployeeTableProps) {
 
   if (employees.length === 0) {
     return (
-      <div className="text-center py-12">
-        <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+      <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-lg border-2 border-dashed border-zinc-200 dark:border-zinc-800 mx-4 my-4">
+        <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-zinc-400" />
+        </div>
+        <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">
           No employees yet
         </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          Get started by adding your first employee
+        <p className="text-zinc-500 dark:text-zinc-400 mb-6 max-w-sm mx-auto">
+          Add your first employee to start managing their payroll and records efficiently.
         </p>
+        <Button onClick={onAddEmployee}>
+          Add Employee
+        </Button>
       </div>
     );
   }

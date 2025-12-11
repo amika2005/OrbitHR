@@ -198,7 +198,11 @@ export default function EmployeesPage() {
             <RefreshCw className="h-6 w-6 text-zinc-400 animate-spin" />
           </div>
         ) : (
-          <EmployeeTable employees={filteredEmployees} onRefresh={fetchEmployees} />
+          <EmployeeTable 
+            employees={filteredEmployees} 
+            onRefresh={fetchEmployees} 
+            onAddEmployee={() => setAddDialogOpen(true)}
+          />
         )}
       </div>
 

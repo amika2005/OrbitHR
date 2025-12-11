@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 export async function getCompanyEmailSettings() {
@@ -84,5 +84,43 @@ export async function updateCompanyEmailSettings(ccEmails: string[]) {
   } catch (error) {
     console.error("Update Email Settings Error:", error);
     return { success: false, error: "Failed to update settings" };
+  }
+}
+
+export async function deleteAccount() {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get user to verify permissions/role before deleting
+    const user = await db.user.findUnique({
+      where: { clerkId: userId },
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    // Delete from Clerk
+    const client = await clerkClient();
+    try {
+      await client.users.deleteUser(userId);
+    } catch (clerkError) {
+      console.error("Error deleting user from Clerk:", clerkError);
+      // Proceed to delete from local DB even if Clerk fails (might be already deleted)
+    }
+
+    // Delete from Database
+    await db.user.delete({
+      where: { clerkId: userId },
+    });
+
+    return { success: true };
+
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    return { success: false, error: "Failed to delete account" };
   }
 }

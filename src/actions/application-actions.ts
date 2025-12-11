@@ -3,9 +3,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { ApplicationStatus } from "@prisma/client";
-import { uploadFile, validateFileType, validateFileSize } from "@/lib/storage";
-import { extractTextFromPDF } from "@/lib/pdf-parser";
-import { screenCandidate } from "./screen-candidate";
 import { revalidatePath } from "next/cache";
 
 // ========================================
@@ -34,7 +31,8 @@ async function getUserCompany() {
 // ========================================
 export async function createApplication(formData: FormData) {
   try {
-    const user = await getUserCompany();
+        const { uploadFile, validateFileType, validateFileSize } = await import("@/lib/storage");
+const user = await getUserCompany();
 
     // Extract form data
     const jobId = formData.get("jobId") as string;
@@ -127,7 +125,9 @@ export async function createApplication(formData: FormData) {
 // ========================================
 async function extractAndScreenResume(applicationId: string, resumeUrl: string) {
   try {
-    // Extract text from PDF
+        const { extractTextFromPDF } = await import("@/lib/pdf-parser");
+    const { screenCandidate } = await import("./screen-candidate");
+// Extract text from PDF
     const pdfResult = await extractTextFromPDF(resumeUrl);
 
     if (!pdfResult.success || !pdfResult.text) {
@@ -324,3 +324,6 @@ export async function getApplicationById(applicationId: string) {
     };
   }
 }
+
+
+

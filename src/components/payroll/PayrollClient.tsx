@@ -954,8 +954,22 @@ export default function PayrollClient({
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {payrollRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                    No payroll records for this month. Click "Add Employee" to create a new record.
+                  <td colSpan={13} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                    <div className="flex flex-col items-center justify-center py-6">
+                      <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
+                        <DollarSign className="w-6 h-6 text-zinc-400" />
+                      </div>
+                      <h3 className="text-base font-medium text-zinc-900 dark:text-white mb-1">
+                        No payroll records found
+                      </h3>
+                      <p className="text-zinc-500 dark:text-zinc-400 mb-4 max-w-sm">
+                        There are no payroll records for {monthName} {year}. Start by adding an employee or creating a new record.
+                      </p>
+                      <Button size="sm" onClick={addNewRow}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Record
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ) : (
