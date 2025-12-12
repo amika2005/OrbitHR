@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
@@ -11,276 +11,261 @@ import {
   MessageSquare,
   BarChart,
   Zap,
-  CheckCircle,
-  ChevronDown
+  Check,
+  Search
 } from "lucide-react";
-
-const features = [
-  {
-    icon: Target,
-    title: "Job Posting & Distribution",
-    description: "Post jobs to multiple platforms with one click. Reach top talent across all major job boards."
-  },
-  {
-    icon: Users,
-    title: "Candidate Management",
-    description: "Track applicants through every stage with customizable pipelines and automated workflows."
-  },
-  {
-    icon: Calendar,
-    title: "Interview Scheduling",
-    description: "Automated scheduling with calendar integration. Send reminders and collect feedback seamlessly."
-  },
-  {
-    icon: MessageSquare,
-    title: "Collaborative Hiring",
-    description: "Share candidate profiles, collect feedback, and make hiring decisions as a team."
-  },
-  {
-    icon: BarChart,
-    title: "Recruitment Analytics",
-    description: "Track time-to-hire, source effectiveness, and optimize your recruitment funnel."
-  },
-  {
-    icon: Zap,
-    title: "AI-Powered Matching",
-    description: "Smart candidate recommendations based on job requirements and cultural fit."
-  }
-];
-
-const benefits = [
-  "Reduce time-to-hire by 50%",
-  "Improve candidate experience",
-  "Streamline interview process",
-  "Make data-driven hiring decisions",
-  "Collaborate with your team",
-  "Integrate with existing tools"
-];
+import { Header } from "@/components/landing/Header";
+import { StickyFooter } from "@/components/landing/StickyFooter";
+import { CTASection } from "@/components/landing/CTASection";
+import { useRef } from "react";
 
 export default function ATSPage() {
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navigation */}
-      {/* SimpleBooks Style Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <motion.div 
-              whileHover={{ rotate: 180 }}
-              transition={{ duration: 0.3 }}
-              className="w-8 h-8 bg-black rounded-full flex items-center justify-center"
-            >
-              <span className="text-white font-bold text-lg">O</span>
-            </motion.div>
-            <span className="text-2xl font-bold text-black tracking-tight">
-              OrbitHR
-            </span>
-          </Link>
+    <div className="flex flex-col min-h-screen bg-white text-zinc-900 overflow-x-hidden">
+       {/* Content Wrapper for Sticky Footer Effect */}
+       <div className="relative z-10 bg-white shadow-2xl rounded-b-3xl mb-0 lg:mb-[500px]">
+          <Header />
+          <ATSHero />
+          <ATSFeatures />
+          <CTASection />
+       </div>
+       <StickyFooter />
+    </div>
+  );
+}
 
-          {/* Navigation Links */}
-          <div className="hidden lg:flex items-center gap-8">
-            <Link href="/" className="text-sm font-semibold text-gray-800 hover:text-black">
-              Home
-            </Link>
-            
-            {/* Services Dropdown */}
-            <div className="relative group">
-              <div className="flex items-center gap-1 text-sm font-semibold text-gray-800 hover:text-black cursor-pointer py-2">
-                Services <ChevronDown className="w-4 h-4" />
-              </div>
-              <div className="absolute top-full left-0 w-48 bg-white border border-gray-100 shadow-lg rounded-lg overflow-hidden hidden group-hover:block">
-                <Link href="/hris" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  HRIS System
-                </Link>
-                <Link href="/ats" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  ATS Platform
-                </Link>
-              </div>
-            </div>
+function ATSHero() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"],
+  });
 
-            {/* Tools Dropdown */}
-            <div className="relative group">
-              <div className="flex items-center gap-1 text-sm font-semibold text-gray-800 hover:text-black cursor-pointer py-2">
-                Tools <ChevronDown className="w-4 h-4" />
-              </div>
-              <div className="absolute top-full left-0 w-64 bg-white border border-gray-100 shadow-lg rounded-lg overflow-hidden hidden group-hover:block">
-                <Link href="#" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  Tax Calculator
-                </Link>
-                <Link href="#" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  ETF/EPF Calculator
-                </Link>
-                <Link href="#" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  Gratuity Calculator
-                </Link>
-                <Link href="#" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-black">
-                  Payslip Generator
-                </Link>
-              </div>
-            </div>
+  const rotateX = useTransform(scrollYProgress, [0, 1], [0, 10]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.9]);
 
-            <Link href="/contact" className="text-sm font-semibold text-[#3ba156]">
-              Contact Us
-            </Link>
-          </div>
+  return (
+    <section ref={containerRef} className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden bg-white">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full bg-blue-50/50 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-purple-50/50 blur-[120px]" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-[0.03] [mask-image:linear-gradient(180deg,black,transparent)]" />
+      </div>
 
-          {/* CTA Buttons */}
-          <div className="flex items-center gap-4">
-            <Link href="/sign-in" className="hidden sm:block">
-              <Button variant="outline" className="rounded-full border-gray-300 text-gray-700 hover:bg-gray-50 px-6 font-semibold">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button className="bg-[#3ba156] hover:bg-[#3ba156] text-white font-bold px-6 rounded-full shadow-none relative overflow-hidden group">
-                <div className="absolute inset-0 bg-[#2e8044] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <span className="relative z-10">Sign Up</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <div className="relative z-10 max-w-7xl mx-auto px-6 text-center">
+        <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 0.6 }}
+           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-zinc-200 mb-8 shadow-sm"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          </span>
+          <span className="text-sm font-medium text-zinc-600">Smart Recruitment Pipeline</span>
+        </motion.div>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 bg-gradient-to-br from-blue-50 to-purple-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-                Hire Faster with Smart ATS
-              </h1>
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Modern Applicant Tracking System designed to streamline your recruitment process. Find, engage, and hire top talent efficiently.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/dashboard">
-                  <Button size="lg" className="h-14 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="#features">
-                  <Button size="lg" variant="outline" className="h-14 px-8 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 text-lg">
-                    Explore Features
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
+        <motion.h1 
+          className="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900 mb-6 leading-tight"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+           Hire Top Talent <br className="hidden md:block" />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+            Faster & Smarter
+          </span>
+        </motion.h1>
 
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200">
-                <div className="space-y-4">
-                  {benefits.map((benefit, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
-                      <span className="text-gray-700">{benefit}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+        <motion.p 
+          className="text-xl text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          Automate your hiring workflow, track candidates seamlessly, and use AI to identify the perfect fit for your team.
+        </motion.p>
 
-      {/* Features Section */}
-      <section id="features" className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Powerful ATS Features
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Everything you need to build a world-class recruitment process.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-xl transition-shadow"
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              How It Works
-            </h2>
-            <p className="text-xl text-gray-600">
-              Simple, streamlined recruitment in 4 easy steps
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {[
-              { step: "1", title: "Post Jobs", desc: "Create and distribute job postings across multiple platforms" },
-              { step: "2", title: "Review Candidates", desc: "AI-powered screening and candidate matching" },
-              { step: "3", title: "Schedule Interviews", desc: "Automated scheduling and team collaboration" },
-              { step: "4", title: "Make Offers", desc: "Send offers and onboard new hires seamlessly" }
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="text-center"
-              >
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-                  {item.step}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Hire Smarter?
-          </h2>
-          <p className="text-xl text-blue-100 mb-10">
-            Start your 14-day free trial today. No credit card required.
-          </p>
+        <motion.div 
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
           <Link href="/dashboard">
-            <Button size="lg" className="h-14 px-8 bg-white text-blue-600 hover:bg-gray-100 text-lg font-medium">
-              Get Started Now
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Button size="lg" className="relative h-14 px-8 bg-zinc-900 text-white text-lg font-semibold rounded-full transition-all shadow-lg hover:shadow-xl overflow-hidden group">
+              <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-indigo-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left ease-out" />
+              <span className="relative flex items-center z-10">
+                Start Free Trial
+                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </span>
             </Button>
           </Link>
-        </div>
-      </section>
-    </div>
+        </motion.div>
+
+        {/* 3D Preview */}
+        <motion.div
+           style={{ rotateX, scale }}
+           initial={{ opacity: 0, y: 100 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 1, delay: 0.4 }}
+           className="relative mx-auto max-w-5xl perspective-1000"
+        >
+            <div className="relative rounded-2xl p-2 bg-gradient-to-b from-zinc-100 to-white border border-zinc-200 shadow-2xl ring-1 ring-zinc-900/5">
+                <img
+                    src="/assets/dashboard-light.png" 
+                    alt="ATS Dashboard"
+                    className="w-full h-auto rounded-xl shadow-inner"
+                />
+                
+                {/* Floating Elements specific to ATS */}
+                <motion.div
+                    animate={{ y: [-10, 10, -10] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="absolute -right-8 top-1/4 bg-white p-4 rounded-xl shadow-xl border border-zinc-100 max-w-[200px]"
+                >
+                   <div className="flex items-center gap-3 mb-2">
+                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                       <Target className="w-4 h-4" />
+                     </div>
+                     <span className="text-sm font-bold text-zinc-900">New Candidate</span>
+                   </div>
+                   <div className="text-xs text-zinc-500">Top match for Design Role found via LinkedIn</div>
+                </motion.div>
+
+                 <motion.div
+                    animate={{ y: [10, -10, 10] }}
+                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                    className="absolute -left-8 bottom-1/4 bg-white p-4 rounded-xl shadow-xl border border-zinc-100"
+                >
+                   <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                       <Check className="w-5 h-5" />
+                     </div>
+                     <div>
+                       <div className="text-sm font-bold text-zinc-900">Offer Accepted</div>
+                       <div className="text-xs text-zinc-500">Frontend Dev position</div>
+                     </div>
+                   </div>
+                </motion.div>
+            </div>
+        </motion.div>
+
+      </div>
+    </section>
+  );
+}
+
+function ATSFeatures() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"],
+  });
+
+  const features = [
+    {
+      title: "Job Distribution",
+      headline: "Post Everywhere in One Click",
+      description: "Create your job post once and distribute it to LinkedIn, Indeed, Glassdoor, and 50+ other job boards instantly.",
+      items: ["Multi-channel posting", "Social media integration", "Custom careers page"],
+      icon: Target,
+      color: "blue"
+    },
+    {
+      title: "Candidate Management",
+      headline: "Visual Pipeline for your Team",
+      description: "Drag-and-drop candidates through your custom hiring pipeline. Collaborate with your team with comments and scorecards.",
+      items: ["Kanban board view", "Automated stage actions", "Team collaboration tools"],
+      icon: Users,
+      color: "purple"
+    },
+    {
+      title: "AI Screening",
+      headline: "Find the Best Match Instantly",
+      description: "Our AI analyzes resumes against job descriptions to score and rank candidates, highlighting top talent automatically.",
+      items: ["Resume parsing", "Match scoring", "Cultural fit analysis"],
+      icon: Zap,
+      color: "indigo"
+    }
+  ];
+
+  return (
+    <section ref={containerRef} className="py-32 bg-white overflow-hidden">
+      <div className="max-w-7xl mx-auto px-6">
+        
+        {features.map((feature, index) => (
+           <div key={index} className={`flex flex-col lg:flex-row${index % 2 === 1 ? '-reverse' : ''} items-center gap-16 mb-32`}>
+             <div className="lg:w-1/2">
+               <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 whileInView={{ opacity: 1, y: 0 }}
+                 viewport={{ once: true }}
+                 transition={{ duration: 0.6 }}
+               >
+                 <div className={`inline-block px-4 py-1.5 mb-6 rounded-full bg-${feature.color}-50 border border-${feature.color}-100`}>
+                   <span className={`text-sm font-semibold text-${feature.color}-600 tracking-wide uppercase`}>
+                     {feature.title}
+                   </span>
+                 </div>
+                 
+                 <h3 className="text-4xl md:text-5xl font-bold text-zinc-900 mb-6 leading-tight">
+                   {feature.headline}
+                 </h3>
+                 
+                 <p className="text-lg text-zinc-500 mb-8 leading-relaxed">
+                   {feature.description}
+                 </p>
+                 
+                 <ul className="space-y-4">
+                   {feature.items.map((item, i) => (
+                     <li key={i} className="flex items-center gap-3 text-zinc-600">
+                        <div className={`w-6 h-6 rounded-full bg-${feature.color}-50 flex items-center justify-center text-${feature.color}-600`}>
+                          <Check className="w-3.5 h-3.5" />
+                        </div>
+                        {item}
+                     </li>
+                   ))}
+                 </ul>
+               </motion.div>
+             </div>
+             
+             {/* Visual representation placeholder */}
+             <div className="lg:w-1/2">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  className="bg-zinc-50 rounded-2xl border border-zinc-100 p-8 shadow-lg min-h-[400px] flex items-center justify-center relative overflow-hidden"
+                >
+                   {/* Abstract UI representation */}
+                   <div className="absolute inset-0 bg-gradient-to-br from-white to-transparent" />
+                   <feature.icon className={`w-32 h-32 text-${feature.color}-100 relative z-10 opacity-50`} />
+                   
+                   <div className="absolute inset-0 flex items-center justify-center z-20">
+                      {/* Simple UI Mockup Card */}
+                      <div className="bg-white p-6 rounded-xl shadow-xl w-3/4 max-w-sm">
+                         <div className="h-4 w-1/3 bg-zinc-100 rounded mb-4" />
+                         <div className="space-y-3">
+                            <div className="h-2 w-full bg-zinc-50 rounded" />
+                            <div className="h-2 w-5/6 bg-zinc-50 rounded" />
+                            <div className="h-2 w-4/6 bg-zinc-50 rounded" />
+                         </div>
+                         <div className="mt-6 flex gap-2">
+                           <div className={`h-8 w-20 rounded-lg bg-${feature.color}-500`} />
+                           <div className="h-8 w-8 rounded-lg bg-zinc-100" />
+                         </div>
+                      </div>
+                   </div>
+                </motion.div>
+             </div>
+           </div>
+        ))}
+
+      </div>
+    </section>
   );
 }
