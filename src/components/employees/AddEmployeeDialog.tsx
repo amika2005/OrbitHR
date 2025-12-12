@@ -42,22 +42,29 @@ export function AddEmployeeDialog({ open, onOpenChange, onSuccess }: AddEmployee
 
   useEffect(() => {
     if (open) {
-      import("@/actions/custom-field-actions").then(({ getCustomFieldDefinitions }) => {
-        // We need companyId, but here we don't have it easily available in props.
-        // However, the action finds it from the user. using a dummy ID or handling it in action.
-        // Actually the action takes companyId. We can get it from user context if available, 
-        // or we can allow the action to resolve it if not passed (if we modify action), 
-        // but easier: rely on the user metadata hook if available or just fetch all for the user's company implicitly?
-        // The action I wrote REQUIRES companyId.
-        // Let's use useUser hook to get metadata.
-      });
+      const fetchFields = async () => {
+        try {
+          const result = await getCustomFieldDefinitions(null, "EMPLOYEE");
+          if (result.success && result.data) {
+            setCustomFields(result.data);
+          }
+        } catch (error) {
+          console.error("Failed to load custom fields", error);
+        }
+      };
+      fetchFields();
     }
   }, [open]);
 
-  // We need useUser to get companyId for fetching definitions
-  // But wait, createEmployee gets it from auth().
-  // Let's modify getCustomFieldDefinitions to optionally find companyId from auth() if not provided?
-  // Or just use the hook in the component.
+  const handleCustomFieldChange = (name: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: {
+        ...prev.customFields,
+        [name]: value,
+      },
+    }));
+  };
 
   const leaveAllocation = getLeaveAllocation(formData.employmentStatus);
 
@@ -355,6 +362,87 @@ export function AddEmployeeDialog({ open, onOpenChange, onSuccess }: AddEmployee
               </div>
             </div>
           </div>
+
+          {/* Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Additional Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === "Select" || field.type === "SELECT" ? (
+                      <select
+                        required={field.required}
+                        value={formData.customFields?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map((opt: string) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : "text"}
+                        required={field.required}
+                        value={formData.customFields?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        placeholder={field.type === "DATE" ? undefined : `Enter ${field.label}`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
+          {/* Custom Fields */}
+          {customFields.length > 0 && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Additional Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {customFields.map((field) => (
+                  <div key={field.id}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === "Select" || field.type === "SELECT" ? (
+                      <select
+                        required={field.required}
+                        value={formData.customFields?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map((opt: string) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : "text"}
+                        required={field.required}
+                        value={formData.customFields?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        placeholder={field.type === "DATE" ? undefined : `Enter ${field.label}`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4">

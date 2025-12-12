@@ -1,6 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 export type CustomFieldType = "TEXT" | "NUMBER" | "DATE" | "SELECT";
@@ -17,7 +18,26 @@ export interface CreateCustomFieldInput {
 
 export async function createCustomFieldDefinition(data: CreateCustomFieldInput) {
   try {
-    const customField = await prisma.customFieldDefinition.create({
+    let { companyId } = data;
+
+    if (!companyId) {
+       const { userId } = await auth();
+       if (!userId) {
+         return { success: false, error: "Not authenticated" };
+       }
+       
+       const user = await db.user.findUnique({
+         where: { clerkId: userId },
+         select: { companyId: true },
+       });
+       
+       if (!user?.companyId) {
+          return { success: false, error: "User has no company assigned" };
+       }
+       companyId = user.companyId;
+    }
+
+    const customField = await db.customFieldDefinition.create({
       data: {
         entityType: data.entityType,
         name: data.name,
@@ -25,7 +45,7 @@ export async function createCustomFieldDefinition(data: CreateCustomFieldInput) 
         type: data.type,
         options: data.options || [],
         required: data.required || false,
-        companyId: data.companyId,
+        companyId: companyId,
       },
     });
 
@@ -37,9 +57,26 @@ export async function createCustomFieldDefinition(data: CreateCustomFieldInput) 
   }
 }
 
-export async function getCustomFieldDefinitions(companyId: string, entityType: string) {
+export async function getCustomFieldDefinitions(companyId: string | null | undefined, entityType: string) {
   try {
-    const fields = await prisma.customFieldDefinition.findMany({
+    if (!companyId) {
+      const { userId } = await auth();
+      if (!userId) {
+        return { success: false, error: "Not authenticated" };
+      }
+      
+      const user = await db.user.findUnique({
+        where: { clerkId: userId },
+        select: { companyId: true },
+      });
+      
+      if (!user?.companyId) {
+         return { success: false, error: "User has no company assigned" };
+      }
+      companyId = user.companyId;
+    }
+
+    const fields = await db.customFieldDefinition.findMany({
       where: {
         companyId,
         entityType,
@@ -58,7 +95,33 @@ export async function getCustomFieldDefinitions(companyId: string, entityType: s
 
 export async function deleteCustomFieldDefinition(id: string) {
   try {
-    await prisma.customFieldDefinition.delete({
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Not authenticated" };
+    }
+
+    const user = await db.user.findUnique({
+      where: { clerkId: userId },
+      select: { companyId: true },
+    });
+
+    if (!user?.companyId) {
+       return { success: false, error: "User has no company assigned" };
+    }
+
+    // Verify ownership before deleting
+    const field = await db.customFieldDefinition.findFirst({
+      where: { 
+        id,
+        companyId: user.companyId 
+      }
+    });
+
+    if (!field) {
+      return { success: false, error: "Field not found or access denied" };
+    }
+
+    await db.customFieldDefinition.delete({
       where: { id },
     });
 

@@ -23,26 +23,42 @@ interface Employee {
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchEmployees = async () => {
-    setLoading(true);
+  const fetchCustomFields = async () => {
     try {
-      const result = await getEmployees();
-
+      const { getCustomFieldDefinitions } = await import("@/actions/custom-field-actions");
+      const result = await getCustomFieldDefinitions(null, "EMPLOYEE");
       if (result.success) {
-        setEmployees(result.employees as unknown as Employee[]);
-      } else {
-        toast.error(result.error || "Failed to fetch employees");
+        setCustomFieldDefs(result.data || []);
       }
     } catch (error) {
-      toast.error("An error occurred");
-    } finally {
-      setLoading(false);
+      console.error("Failed to load custom fields", error);
     }
+  };
+
+  const fetchEmployees = async () => {
+    setLoading(true);
+    await Promise.all([
+      (async () => {
+        try {
+          const result = await getEmployees();
+          if (result.success) {
+            setEmployees(result.employees as unknown as Employee[]);
+          } else {
+            toast.error(result.error || "Failed to fetch employees");
+          }
+        } catch (error) {
+          toast.error("An error occurred");
+        }
+      })(),
+      fetchCustomFields()
+    ]);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -81,7 +97,10 @@ export default function EmployeesPage() {
         </div>
         <div className="flex items-center gap-2">
           {/* Custom Fields */}
-          <CustomFieldManager entityType="EMPLOYEE" />
+          <CustomFieldManager 
+            entityType="EMPLOYEE" 
+            onChange={fetchCustomFields}
+          />
           
           <Button
             variant="outline"
@@ -200,6 +219,7 @@ export default function EmployeesPage() {
         ) : (
           <EmployeeTable 
             employees={filteredEmployees} 
+            customFieldDefs={customFieldDefs}
             onRefresh={fetchEmployees} 
             onAddEmployee={() => setAddDialogOpen(true)}
           />

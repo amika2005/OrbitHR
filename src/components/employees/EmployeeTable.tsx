@@ -33,25 +33,14 @@ interface EmployeeTableProps {
   employees: Employee[];
   onRefresh: () => void;
   onAddEmployee: () => void;
+  customFieldDefs: any[];
 }
 
-export function EmployeeTable({ employees, onRefresh, onAddEmployee }: EmployeeTableProps) {
+export function EmployeeTable({ employees, onRefresh, onAddEmployee, customFieldDefs }: EmployeeTableProps) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
   const { user } = useUser();
-
-  useEffect(() => {
-    if (user?.publicMetadata?.companyId) {
-      import("@/actions/custom-field-actions").then(async ({ getCustomFieldDefinitions }) => {
-        const result = await getCustomFieldDefinitions(user.publicMetadata.companyId as string, "EMPLOYEE");
-        if (result.success) {
-          setCustomFieldDefs(result.data || []);
-        }
-      });
-    }
-  }, [user]);
 
   const handleDelete = async (employee: Employee) => {
     const confirmed = confirm(
@@ -258,10 +247,11 @@ export function EmployeeTable({ employees, onRefresh, onAddEmployee }: EmployeeT
                 </td>
 
                 {/* Dynamic custom field values */}
+                {/* Dynamic custom field values */}
                 {customFieldDefs.map((def) => (
                   <td key={def.name} className="px-6 py-4 text-zinc-600 dark:text-zinc-300">
                     {employee.customFields?.[def.name] ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      <span className="text-sm">
                         {employee.customFields[def.name]}
                       </span>
                     ) : (

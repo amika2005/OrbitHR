@@ -94,13 +94,15 @@ interface PayrollClientProps {
   };
   initialMonth: number;
   initialYear: number;
+  customFieldDefs?: any[];
 }
 
 export default function PayrollClient({ 
   initialRecords, 
   summary: initialSummary,
   initialMonth,
-  initialYear
+  initialYear,
+  customFieldDefs = []
 }: PayrollClientProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -112,7 +114,7 @@ export default function PayrollClient({
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
+  // customFieldDefs passed as prop now
   
   // Email Distribution State
   const [showEmailSettings, setShowEmailSettings] = useState(false);
@@ -184,16 +186,8 @@ export default function PayrollClient({
         console.error("Failed to load employees:", error);
       }
     };
-
-    // Load custom field definitions
-    if (user?.publicMetadata?.companyId) {
-      import("@/actions/custom-field-actions").then(async ({ getCustomFieldDefinitions }) => {
-        const result = await getCustomFieldDefinitions(user.publicMetadata.companyId as string, "PAYROLL");
-        if (result.success) {
-          setCustomFieldDefs(result.data || []);
-        }
-      });
-    }
+    
+    // Custom definitions are now passed as props
 
     const savedSettings = localStorage.getItem("company_settings");
     if (savedSettings) {
@@ -954,7 +948,7 @@ export default function PayrollClient({
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {payrollRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                  <td colSpan={13 + customFieldDefs.length} className="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">
                     <div className="flex flex-col items-center justify-center py-6">
                       <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4">
                         <DollarSign className="w-6 h-6 text-zinc-400" />
@@ -1275,17 +1269,33 @@ export default function PayrollClient({
                                 {record.customFields?.[def.name] || '-'}
                              </span>
                           ) : (
-                            <input
-                              type={def.type === "NUMBER" ? "number" : "text"}
-                              value={record.customFields?.[def.name] || ""}
-                              onChange={(e) => {
-                                const newVal = def.type === "NUMBER" ? Number(e.target.value) : e.target.value;
-                                const newCustomFields = { ...record.customFields, [def.name]: newVal };
-                                updateRecord(record.id, 'customFields', newCustomFields);
-                              }}
-                              className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                              placeholder={def.label}
-                            />
+                            def.type === "SELECT" ? (
+                              <select
+                                value={record.customFields?.[def.name] || ""}
+                                onChange={(e) => {
+                                  const newCustomFields = { ...record.customFields, [def.name]: e.target.value };
+                                  updateRecord(record.id, 'customFields', newCustomFields);
+                                }}
+                                className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                              >
+                                <option value="">Select</option>
+                                {def.options?.map((opt: string) => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type={def.type === "NUMBER" ? "number" : def.type === "DATE" ? "date" : "text"}
+                                value={record.customFields?.[def.name] || ""}
+                                onChange={(e) => {
+                                  const newVal = def.type === "NUMBER" ? Number(e.target.value) : e.target.value;
+                                  const newCustomFields = { ...record.customFields, [def.name]: newVal };
+                                  updateRecord(record.id, 'customFields', newCustomFields);
+                                }}
+                                className="text-sm border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 w-28 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                                placeholder={def.type === "DATE" ? undefined : def.label}
+                              />
+                            )
                           )}
                         </td>
                       ))}

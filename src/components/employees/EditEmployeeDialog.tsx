@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { updateEmployee } from "@/actions/employee-actions";
+import { getCustomFieldDefinitions } from "@/actions/custom-field-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Edit, Loader2 } from "lucide-react";
@@ -27,6 +28,7 @@ interface EditEmployeeDialogProps {
     bankName?: string | null;
     accountNumber?: string | null;
     branch?: string | null;
+    customFields?: Record<string, any> | null;
   };
 }
 
@@ -45,8 +47,38 @@ export function EditEmployeeDialog({ open, onOpenChange, onSuccess, employee }: 
     salary: employee.salary?.toString() || "",
     bankName: employee.bankName || "",
     accountNumber: employee.accountNumber || "",
+
     branch: employee.branch || "",
+    customFields: employee.customFields || {},
   });
+
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      const fetchFields = async () => {
+        try {
+          const result = await getCustomFieldDefinitions(null, "EMPLOYEE");
+          if (result.success && result.data) {
+            setCustomFieldDefinitions(result.data);
+          }
+        } catch (error) {
+          console.error("Failed to load custom fields", error);
+        }
+      };
+      fetchFields();
+    }
+  }, [open]);
+
+  const handleCustomFieldChange = (name: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: {
+        ...(prev.customFields as Record<string, any>),
+        [name]: value,
+      },
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,6 +309,47 @@ export function EditEmployeeDialog({ open, onOpenChange, onSuccess, employee }: 
               />
             </div>
           </div>
+
+
+          {/* Custom Fields */}
+          {customFieldDefinitions.length > 0 && (
+            <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Additional Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                {customFieldDefinitions.map((field) => (
+                  <div key={field.id}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {field.type === "Select" || field.type === "SELECT" ? (
+                      <select
+                        required={field.required}
+                        value={(formData.customFields as any)?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options?.map((opt: string) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type === "NUMBER" ? "number" : field.type === "DATE" ? "date" : "text"}
+                        required={field.required}
+                        value={(formData.customFields as any)?.[field.name] || ""}
+                        onChange={(e) => handleCustomFieldChange(field.name, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+                        placeholder={field.type === "DATE" ? undefined : `Enter ${field.label}`}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Buttons */}
           <div className="flex justify-end gap-3 pt-4">
