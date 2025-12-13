@@ -604,6 +604,9 @@ export default function PayrollClient({
             r.id === record.id ? { 
               ...r, 
               id: result.data?.id || r.id, // Update ID from server result
+              // Merge server-returned data (critical for carry-over values)
+              allowances: result.data?.allowances as any || r.allowances,
+              deductions: result.data?.otherDeductions as any || r.deductions,
               slip, 
               isGenerated: true, 
               generatedAt: new Date().toISOString() 
