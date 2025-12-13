@@ -79,14 +79,53 @@ export async function generatePayroll(data: z.infer<typeof payrollSchema>) {
       },
     });
 
+    // Check for previous month's carry-over if this is a new record or current data is empty
+    const areAllowancesEmpty = !data.allowances || Object.values(data.allowances).every(v => v === 0);
+    const areDeductionsEmpty = !data.deductions || Object.values(data.deductions).every(v => v === 0);
+
+    let finalAllowances = data.allowances || {};
+    let finalDeductions = data.deductions || {};
+
+    if ((!existingPayroll && (areAllowancesEmpty || areDeductionsEmpty)) || (existingPayroll && areAllowancesEmpty && areDeductionsEmpty)) {
+       let previousMonth = validatedData.month - 1;
+       let previousYear = validatedData.year;
+       if (previousMonth === 0) {
+          previousMonth = 12;
+          previousYear = validatedData.year - 1;
+       }
+
+       const previousPayroll = await db.payrollRecord.findUnique({
+          where: {
+            employeeId_month_year: {
+               employeeId: validatedData.employeeId,
+               month: previousMonth,
+               year: previousYear,
+            },
+          },
+          select: {
+             allowances: true,
+             otherDeductions: true,
+          },
+       });
+
+       if (previousPayroll) {
+          if (areAllowancesEmpty) {
+             finalAllowances = previousPayroll.allowances as Record<string, number> || {};
+          }
+          if (areDeductionsEmpty) {
+             finalDeductions = previousPayroll.otherDeductions as Record<string, number> || {};
+          }
+       }
+    }
+
     // Generate payroll data using our calculation function
     const payrollData = generatePayrollData({
       employeeId: validatedData.employeeId,
       month: validatedData.month,
       year: validatedData.year,
       basicSalary: validatedData.basicSalary,
-      allowances: validatedData.allowances || {},
-      deductions: validatedData.deductions || {},
+      allowances: finalAllowances,
+      deductions: finalDeductions,
       bonuses: validatedData.bonuses || 0,
       country: validatedData.country,
       currency: validatedData.currency,
@@ -226,13 +265,39 @@ export async function batchGeneratePayroll(
           continue;
         }
 
+        // Check for previous month's payroll to carry over details
+        let previousMonth = month - 1;
+        let previousYear = year;
+        if (previousMonth === 0) {
+          previousMonth = 12;
+          previousYear = year - 1;
+        }
+
+        const previousPayroll = await db.payrollRecord.findUnique({
+          where: {
+            employeeId_month_year: {
+              employeeId: employee.id,
+              month: previousMonth,
+              year: previousYear,
+            },
+          },
+          select: {
+            allowances: true,
+            otherDeductions: true,
+          },
+        });
+
+        const allowances = previousPayroll?.allowances as Record<string, number> || {};
+        const deductions = previousPayroll?.otherDeductions as Record<string, number> || {};
+
         // Generate payroll data
         const payrollData = generatePayrollData({
           employeeId: employee.id,
           month,
           year,
           basicSalary: Number(employee.salary),
-          allowances: {},
+          allowances,
+          deductions,
           bonuses: 0,
           country: company.country,
           currency: company.currency,
