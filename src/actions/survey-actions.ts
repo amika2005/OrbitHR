@@ -148,7 +148,17 @@ export async function launchSurvey(id: string) {
     revalidatePath("/dashboard/retain/surveys");
     
     // Generate public link
-    const publicLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/survey/${updated.shareToken}`;
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!baseUrl) {
+      if (process.env.VERCEL_URL) {
+        baseUrl = `https://${process.env.VERCEL_URL}`;
+      } else {
+        baseUrl = "http://localhost:3000";
+      }
+    }
+
+    const publicLink = `${baseUrl}/survey/${updated.shareToken}`;
     
     return { success: true, survey: updated, publicLink };
   } catch (error) {
