@@ -26,6 +26,7 @@ export interface CreateEmployeeData {
 
 interface UpdateEmployeeData {
   id: string;
+  email?: string;
   firstName?: string;
   lastName?: string;
   employeeId?: string;
@@ -81,17 +82,38 @@ export async function createEmployee(data: CreateEmployeeData) {
       return { success: false, error: "Email already exists" };
     }
 
-    // Create user in Clerk
+    // Create user in Clerk or get existing
     const client = await clerkClient();
-    const clerkUser = await client.users.createUser({
-      emailAddress: [data.email],
-      password: data.password,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      publicMetadata: {
-        role: UserRole.EMPLOYEE,
-      },
-    });
+    let clerkUserId = "";
+    
+    try {
+      const clerkUser = await client.users.createUser({
+        emailAddress: [data.email],
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        publicMetadata: {
+          role: UserRole.EMPLOYEE,
+        },
+      });
+      clerkUserId = clerkUser.id;
+    } catch (error: any) {
+      // If user already exists in Clerk, try to find them
+      if (error?.errors?.[0]?.code === "form_identifier_exists") {
+        const existingClerkUsers = await client.users.getUserList({ 
+          emailAddress: [data.email],
+          limit: 1 
+        });
+
+        if (existingClerkUsers.data.length > 0) {
+          clerkUserId = existingClerkUsers.data[0].id;
+        } else {
+          return { success: false, error: "Email exists in system but user could not be found." };
+        }
+      } else {
+        throw error;
+      }
+    }
 
     // Get leave allocation based on employment status
     const employmentStatus = data.employmentStatus || 'PERMANENT';
@@ -100,7 +122,7 @@ export async function createEmployee(data: CreateEmployeeData) {
     // Create user in database
     await db.user.create({
       data: {
-        clerkId: clerkUser.id,
+        clerkId: clerkUserId,
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -189,16 +211,32 @@ export async function updateEmployee(data: UpdateEmployeeData) {
     // Update in Clerk
     const client = await clerkClient();
     if (employee.clerkId) {
-      await client.users.updateUser(employee.clerkId, {
-        firstName: data.firstName,
-        lastName: data.lastName,
+      try {
+        await client.users.updateUser(employee.clerkId, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+        });
+      } catch (error) {
+        console.error("Failed to update Clerk user:", error);
+      }
+    }
+
+    // Check if email is changing and validate uniqueness
+    if (data.email) {
+      const existingEmail = await db.user.findUnique({
+        where: { email: data.email },
       });
+      
+      if (existingEmail && existingEmail.id !== data.id) {
+        return { success: false, error: "Email already exists" };
+      }
     }
 
     // Update in database
     await db.user.update({
       where: { id: data.id },
       data: {
+        email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
         employeeId: data.employeeId,

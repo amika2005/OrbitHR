@@ -35,6 +35,7 @@ interface EditEmployeeDialogProps {
 export function EditEmployeeDialog({ open, onOpenChange, onSuccess, employee }: EditEmployeeDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    email: employee.email,
     firstName: employee.firstName,
     lastName: employee.lastName,
     employeeId: employee.employeeId || "",
@@ -150,6 +151,20 @@ export function EditEmployeeDialog({ open, onOpenChange, onSuccess, employee }: 
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
               />
             </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-olive-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
+            />
           </div>
 
           {/* Employee ID & Hire Date */}
