@@ -221,8 +221,8 @@ export default function PayrollClient({
         otherDeductions: (r as any).otherDeductions,
       });
 
-      // Get days in current month for default values
-      const daysInMonth = new Date(year, month, 0).getDate();
+        // Get days in current month for default values
+      const daysInMonth = new Date(initialYear, initialMonth, 0).getDate();
 
       const record = {
         id: r.id,
@@ -275,7 +275,7 @@ export default function PayrollClient({
           designation: record.position || "Employee",
           department: record.department || "General",
           dateOfJoining: record.dateOfJoining || new Date().toISOString().split('T')[0],
-          payPeriod: new Date(year, month - 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
+          payPeriod: new Date(initialYear, initialMonth - 1).toLocaleString('default', { month: 'long', year: 'numeric' }),
           workedDays: 30,
           basicSalary: record.basicSalary,
           allowances: record.allowances,
