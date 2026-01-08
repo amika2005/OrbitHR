@@ -18,9 +18,14 @@ export async function syncUser() {
     return dbUser;
   }
 
+  const primaryEmail = user.emailAddresses[0]?.emailAddress;
+  if (!primaryEmail) {
+    throw new Error("User has no primary email address");
+  }
+
   // Check if user exists by EMAIL (legacy user or pre-created invite)
   const existingUserByEmail = await db.user.findUnique({
-    where: { email: user.emailAddresses[0].emailAddress },
+    where: { email: primaryEmail },
     include: { company: true },
   });
 
@@ -91,7 +96,7 @@ export async function syncUser() {
     const newUser = await db.user.create({
       data: {
         clerkId: user.id,
-        email: user.emailAddresses[0].emailAddress,
+        email: primaryEmail,
         firstName: user.firstName || "User",
         lastName: user.lastName || "",
         role: "HR_MANAGER", // Default to HR Manager for new workspace owners
@@ -104,7 +109,7 @@ export async function syncUser() {
     // This happens if the user exists but wasn't found in the initial check (race condition, casing, etc.)
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
       const existingUser = await db.user.findUnique({
-        where: { email: user.emailAddresses[0].emailAddress },
+        where: { email: primaryEmail },
       });
       
       if (existingUser) {
